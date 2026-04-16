@@ -1,0 +1,2064 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Ramped — PNL Executive Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f14;--card:#161921;--border:#2a2f3d;
+  --primary:#6c63ff;--secondary:#00d4aa;
+  --red:#ff6b6b;--yellow:#ffd93d;--orange:#ff9f43;--green:#00c896;
+  --text:#e8eaf0;--muted:#7b8099;--radius:12px;
+}
+html{font-size:16px}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+
+/* ── header ── */
+header{
+  background:var(--card);border-bottom:1px solid var(--border);
+  padding:0 2rem;display:flex;align-items:center;justify-content:space-between;
+  height:64px;position:sticky;top:0;z-index:200;gap:1rem;
+}
+.logo{font-size:1.4rem;font-weight:800;letter-spacing:-.5px;white-space:nowrap;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header-badges{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.hbadge{padding:.28rem .75rem;border-radius:20px;font-size:.71rem;font-weight:700;white-space:nowrap}
+.hb-exec{background:rgba(108,99,255,.15);color:var(--primary);border:1px solid rgba(108,99,255,.3)}
+.hb-date{background:rgba(0,212,170,.12);color:var(--secondary);border:1px solid rgba(0,212,170,.3)}
+
+/* ── tab nav ── */
+.tab-nav{
+  background:var(--card);border-bottom:1px solid var(--border);
+  padding:0 1.5rem;display:flex;overflow-x:auto;
+  position:sticky;top:64px;z-index:199;
+}
+.tab-nav::-webkit-scrollbar{height:3px}
+.tab-btn{
+  padding:0 1.1rem;height:46px;border:none;border-bottom:3px solid transparent;
+  background:transparent;color:var(--muted);font-size:.82rem;font-weight:600;
+  cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;
+}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--primary)}
+.tab-btn:hover:not(.active){color:var(--text)}
+
+/* ── panels ── */
+.panel{max-width:1400px;margin:0 auto;padding:1.8rem 1.5rem 3rem}
+
+/* ── section labels ── */
+.slabel{
+  font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+  color:var(--muted);margin-bottom:.9rem;margin-top:1.8rem;
+}
+.slabel:first-child{margin-top:0}
+
+/* ── year cards ── */
+.year-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:.75rem}
+@media(max-width:1100px){.year-cards{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.year-cards{grid-template-columns:repeat(2,1fr)}}
+.ycard{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1rem 1.1rem;position:relative;overflow:hidden;transition:transform .18s;
+}
+.ycard:hover{transform:translateY(-2px)}
+.ycard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius) var(--radius) 0 0}
+.ycard.loss::before{background:var(--red)}
+.ycard.win::before{background:var(--green)}
+.ycard.part::before{background:var(--orange)}
+.yc-yr{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);margin-bottom:.4rem}
+.yc-rev{font-size:1.15rem;font-weight:800;letter-spacing:-.5px;margin-bottom:.2rem}
+.yc-gm{font-size:.72rem;color:var(--muted);margin-bottom:.45rem}
+.yc-profit{font-size:.84rem;font-weight:700}
+.yc-profit.p{color:var(--green)}.yc-profit.n{color:var(--red)}
+.yc-yoy{font-size:.67rem;color:var(--muted);margin-top:.25rem}
+.bp{display:inline-block;background:rgba(255,159,67,.15);color:var(--orange);
+  border:1px solid rgba(255,159,67,.3);border-radius:5px;font-size:.58rem;
+  font-weight:700;padding:1px 5px;margin-left:.25rem;vertical-align:middle}
+
+/* ── chart cards ── */
+.cc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.3rem}
+.ct{font-size:.8rem;font-weight:700;color:var(--text);margin-bottom:.9rem;display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+.ct .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.cw{position:relative;width:100%}
+.h240{height:240px}.h260{height:260px}.h280{height:280px}.h200{height:200px}.h300{height:300px}
+
+/* ── grid layouts ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+.gWN{display:grid;grid-template-columns:2fr 1fr;gap:1rem;margin-top:1rem}
+.gNW{display:grid;grid-template-columns:1fr 2fr;gap:1rem;margin-top:1rem}
+@media(max-width:860px){.g2,.g3,.gWN,.gNW{grid-template-columns:1fr}}
+
+/* ── callout cards ── */
+.insight{
+  background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);
+  border-radius:var(--radius);padding:1rem 1.3rem;
+  display:flex;align-items:flex-start;gap:.75rem;font-size:.83rem;line-height:1.6;
+}
+.insight strong{color:var(--primary)}
+.warn-card{
+  background:rgba(255,107,107,.07);border:1px solid rgba(255,107,107,.22);
+  border-radius:var(--radius);padding:1rem 1.3rem;
+  display:flex;align-items:flex-start;gap:.75rem;font-size:.83rem;line-height:1.6;
+}
+.warn-card strong{color:var(--red)}
+.ci{font-size:1.2rem;flex-shrink:0;margin-top:1px}
+
+/* ── ARS / USD business cards ── */
+.biz-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:0}
+@media(max-width:700px){.biz-grid{grid-template-columns:1fr}}
+.biz-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.3rem;overflow:hidden}
+.biz-header{display:flex;align-items:center;gap:.6rem;margin-bottom:1rem}
+.biz-flag{font-size:1.2rem}
+.biz-name{font-size:.9rem;font-weight:700}
+.biz-subtitle{font-size:.7rem;color:var(--muted);margin-left:auto}
+.biz-rows{display:flex;flex-direction:column;gap:.35rem}
+.biz-row{display:grid;grid-template-columns:54px 1fr 1fr 1fr 1fr;align-items:center;font-size:.78rem;gap:.3rem}
+.biz-row.head{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;border-bottom:1px solid var(--border);padding-bottom:.4rem;margin-bottom:.1rem}
+.biz-rev{font-weight:700;color:var(--text);text-align:right}
+.biz-gm{text-align:right;font-size:.72rem;color:var(--muted)}
+.biz-pft{text-align:right;font-weight:700}
+.biz-pft.p{color:var(--green)}.biz-pft.n{color:var(--red)}
+
+/* ── client table ── */
+.dtable{width:100%;border-collapse:collapse;font-size:.81rem}
+.dtable th{text-align:left;color:var(--muted);font-weight:600;font-size:.67rem;
+  text-transform:uppercase;letter-spacing:.7px;padding:.45rem .6rem .7rem;border-bottom:1px solid var(--border)}
+.dtable td{padding:.6rem .6rem;border-bottom:1px solid rgba(42,47,61,.55);vertical-align:middle}
+.dtable tr:last-child td{border-bottom:none}
+.dtable tr:hover td{background:rgba(108,99,255,.04)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.mbadge{display:inline-block;border-radius:6px;font-size:.69rem;font-weight:700;padding:2px 7px}
+.mg{background:rgba(0,200,150,.12);color:var(--green)}
+.my{background:rgba(255,217,61,.1);color:var(--yellow)}
+.mr{background:rgba(255,107,107,.1);color:var(--red)}
+.pbar-wrap{display:flex;align-items:center;gap:5px;justify-content:flex-end}
+.pbar{height:5px;border-radius:3px;background:var(--primary);min-width:2px}
+
+/* ── heatmap ── */
+.hm-wrap{overflow-x:auto;padding-top:.5rem}
+.hm{display:grid;grid-template-columns:52px repeat(12,1fr);gap:3px;min-width:520px}
+.hm-lbl{font-size:.67rem;color:var(--muted);display:flex;align-items:center;font-weight:600}
+.hm-hdr{font-size:.63rem;color:var(--muted);text-align:center;padding:.3rem 0;font-weight:600}
+.hmc{border-radius:5px;padding:.45rem .15rem;text-align:center;font-size:.62rem;font-weight:600;transition:transform .15s;cursor:default}
+.hmc:hover{transform:scale(1.08);z-index:1;position:relative}
+.hm-empty{background:rgba(42,47,61,.4);color:rgba(123,128,153,.5)}
+
+/* ── objectives ── */
+.big-prog{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.6rem;margin-bottom:1rem}
+.bp-hdr{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:.9rem;flex-wrap:wrap;gap:.5rem}
+.bp-title{font-size:.95rem;font-weight:700}
+.bp-sub{font-size:.74rem;color:var(--muted);margin-top:.2rem}
+.bp-pct{font-size:2rem;font-weight:800;color:var(--red);line-height:1}
+.bp-track{height:22px;border-radius:11px;background:rgba(42,47,61,.8);overflow:hidden;position:relative}
+.bp-fill{height:100%;border-radius:11px;transition:width .9s ease}
+.bp-fill-lbl{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:.7rem;font-weight:700;color:#fff}
+.bp-stats{display:flex;gap:1.8rem;margin-top:.9rem;flex-wrap:wrap}
+.bp-sv{font-size:1.1rem;font-weight:800}.bp-sl{font-size:.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
+
+.gap-card{
+  background:rgba(255,217,61,.07);border:1px solid rgba(255,217,61,.25);
+  border-radius:var(--radius);padding:1.1rem 1.4rem;margin-bottom:1rem;
+  display:flex;align-items:center;gap:1rem;flex-wrap:wrap;
+}
+.gap-num{font-size:1.5rem;font-weight:800;color:var(--yellow)}
+.gap-txt{font-size:.82rem;color:var(--text);line-height:1.5}
+.gap-txt span{color:var(--yellow);font-weight:700}
+
+.otable{width:100%;border-collapse:collapse;font-size:.79rem}
+.otable th{text-align:left;color:var(--muted);font-weight:600;font-size:.65rem;
+  text-transform:uppercase;letter-spacing:.7px;padding:.4rem .55rem .65rem;border-bottom:1px solid var(--border)}
+.otable td{padding:.5rem .55rem;border-bottom:1px solid rgba(42,47,61,.55);vertical-align:middle}
+.otable tr:last-child td{border-bottom:none}
+.otable .num{text-align:right;font-variant-numeric:tabular-nums}
+.tprog-track{height:6px;border-radius:3px;background:rgba(42,47,61,.8);overflow:hidden;min-width:55px}
+.tprog-fill{height:100%;border-radius:3px}
+.pend{color:var(--muted);font-size:.73rem;font-style:italic}
+.adj-val{color:var(--yellow);font-weight:700}
+
+/* ── recommendation cards ── */
+.rec-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.3rem 1.4rem;margin-bottom:.85rem;
+  display:grid;grid-template-columns:auto 1fr;gap:1rem;align-items:start;
+}
+.rec-num{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  display:flex;align-items:center;justify-content:center;
+  font-size:.85rem;font-weight:800;color:#fff;flex-shrink:0;
+}
+.rec-body{}
+.rec-title{font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:.35rem;display:flex;align-items:center;gap:.5rem}
+.rec-title .ri{font-size:1.1rem}
+.rec-context{font-size:.77rem;color:var(--muted);line-height:1.6;margin-bottom:.5rem}
+.rec-context strong{color:var(--text)}
+.rec-actions{display:flex;flex-direction:column;gap:.25rem}
+.rec-action{font-size:.76rem;color:var(--text);display:flex;align-items:flex-start;gap:.4rem;line-height:1.5}
+.rec-action::before{content:'→';color:var(--primary);flex-shrink:0;font-weight:700}
+.rec-impact{
+  display:inline-block;margin-top:.55rem;
+  background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.25);
+  border-radius:6px;padding:3px 10px;font-size:.71rem;font-weight:700;color:var(--secondary);
+}
+
+/* ── pnl summary table ── */
+.pnl-tbl{width:100%;border-collapse:collapse;font-size:.77rem}
+.pnl-tbl thead th{background:rgba(255,255,255,.04);padding:.42rem .65rem;white-space:nowrap;border-bottom:1px solid var(--border)}
+.pnl-tbl tbody td{padding:.36rem .65rem;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.04)}
+.pnl-lbl{color:var(--muted);font-weight:500;text-align:left!important;position:sticky;left:0;background:var(--bg);z-index:1;min-width:90px}
+.pnl-yr{cursor:pointer;text-align:right;font-weight:700;color:var(--text);transition:color .15s;user-select:none}
+.pnl-yr:hover,.pnl-yr.open{color:var(--primary)}
+.pnl-mo{text-align:right;font-weight:400;color:var(--muted);font-size:.71rem;background:rgba(108,99,255,.06)}
+.pnl-yc{text-align:right;font-weight:600}
+.pnl-mc{text-align:right;color:var(--muted);font-size:.73rem;background:rgba(108,99,255,.03)}
+.pnl-sep td{border-top:2px solid rgba(255,255,255,.09)!important}
+
+/* ── year accordion ── */
+.yr-btn{cursor:pointer;transition:transform .18s,border-color .18s}
+.yr-btn:hover{transform:translateY(-2px)}
+.yr-active{border-color:var(--primary) !important}
+.yr-active .yr-chevron{color:var(--primary);transform:rotate(90deg)}
+.yr-chevron{float:right;font-size:.6rem;color:var(--muted);transition:transform .2s,color .2s;line-height:1.4;margin-top:.05rem}
+.yr-expand{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  overflow-x:auto;animation:expandIn .22s ease;
+}
+@keyframes expandIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+.yr-no-data{padding:1.4rem;text-align:center;color:var(--muted);font-size:.8rem}
+
+/* scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:#2e3243;border-radius:3px}
+footer{text-align:center;color:var(--muted);font-size:.7rem;padding:1.8rem 1rem 1.5rem;border-top:1px solid var(--border);margin-top:2rem}
+
+/* ── loading overlay ── */
+#gsOverlay{
+  position:fixed;inset:0;background:var(--bg);z-index:9999;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;
+  transition:opacity .4s;
+}
+#gsOverlay.hidden{opacity:0;pointer-events:none}
+.gs-spinner{
+  width:46px;height:46px;
+  border:3px solid rgba(108,99,255,.18);border-top-color:var(--primary);
+  border-radius:50%;animation:gs-spin .75s linear infinite;
+}
+@keyframes gs-spin{to{transform:rotate(360deg)}}
+.gs-logo{font-size:1.3rem;font-weight:800;letter-spacing:-.5px;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:-.5rem;
+}
+.gs-msg{color:var(--muted);font-size:.84rem}
+
+/* ── error overlay ── */
+#gsError{
+  position:fixed;inset:0;background:rgba(13,15,20,.96);z-index:9998;
+  display:none;align-items:center;justify-content:center;flex-direction:column;
+  gap:.9rem;text-align:center;padding:2rem;
+}
+#gsError.visible{display:flex}
+.gse-icon{font-size:2.8rem;line-height:1}
+.gse-title{font-size:1rem;font-weight:700;color:var(--red)}
+.gse-msg{font-size:.81rem;color:var(--muted);max-width:440px;line-height:1.65}
+.gse-btns{display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;margin-top:.3rem}
+.gse-btn{
+  padding:.55rem 1.6rem;border:none;border-radius:8px;
+  font-size:.83rem;font-weight:700;cursor:pointer;transition:opacity .15s;
+}
+.gse-btn:hover{opacity:.85}
+.gse-btn.primary{background:var(--primary);color:#fff}
+.gse-btn.secondary{background:rgba(123,128,153,.15);color:var(--text);border:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="gsOverlay">
+  <div class="gs-logo">Ramped 2.0</div>
+  <div class="gs-spinner"></div>
+  <div class="gs-msg" id="gsMsg">Conectando con Google Sheets...</div>
+</div>
+
+<!-- Error overlay -->
+<div id="gsError">
+  <div class="gse-icon">⚠️</div>
+  <div class="gse-title">No se pudieron cargar los datos en vivo</div>
+  <div class="gse-msg" id="gsErrMsg">Error al conectar con Google Sheets API. El dashboard muestra los últimos datos guardados.</div>
+  <div class="gse-btns">
+    <button class="gse-btn primary" onclick="retryLoad()">↺ Reintentar</button>
+    <button class="gse-btn secondary" onclick="useFallback()">Usar datos guardados</button>
+  </div>
+</div>
+
+<header>
+  <div class="logo">Ramped <span style="opacity:.55">2.0</span></div>
+  <div class="header-badges">
+    <span class="hbadge hb-exec">Executive PNL</span>
+    <span class="hbadge hb-date">📅 Datos al Mar 2026</span>
+  </div>
+</header>
+
+<nav class="tab-nav">
+  <button class="tab-btn active" onclick="showTab(1,this)">📊 Consolidado</button>
+  <button class="tab-btn"        onclick="showTab(2,this)">🇦🇷 ARS vs 🇺🇸 USD</button>
+  <button class="tab-btn"        onclick="showTab(3,this)">🏢 Clientes</button>
+  <button class="tab-btn"        onclick="showTab(4,this)">💰 SG&A</button>
+  <button class="tab-btn"        onclick="showTab(5,this)">🎯 Objetivos 2026</button>
+  <button class="tab-btn"        onclick="showTab(6,this)">🚀 Recomendaciones</button>
+</nav>
+
+<!-- ══ TAB 1 ═══════════════════════════════════════════════════════════════ -->
+<div id="tab1" class="panel">
+
+  <p class="slabel">Evolución anual consolidada — montos en USD</p>
+  <div class="year-cards" id="yearCards"></div>
+  <!-- Accordion: apertura mensual del año seleccionado -->
+  <div id="yearExpand" style="display:none;margin-top:.75rem"></div>
+
+  <!-- PNL Summary Table -->
+  <div id="pnlSummaryTable" style="margin-top:1.5rem"></div>
+
+  <div class="gWN" style="margin-top:1.5rem">
+    <div class="cc">
+      <div class="ct"><span class="dot" style="background:var(--primary)"></span>Revenue vs Estructura de Costos</div>
+      <div class="cw h280"><canvas id="chartStack"></canvas></div>
+    </div>
+    <div class="cc">
+      <div class="ct"><span class="dot" style="background:var(--secondary)"></span>Evolución Net Profit</div>
+      <div class="cw h280"><canvas id="chartProfit"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB 2 ═══════════════════════════════════════════════════════════════ -->
+<div id="tab2" class="panel" style="display:none">
+  <p class="slabel">Dos negocios paralelos — ARS (clientes locales) y USD (clientes internacionales)</p>
+
+  <!-- SECCIÓN 1: TABLAS CON GROSS MARGIN -->
+  <div class="biz-grid">
+
+    <!-- TABLA ARS -->
+    <div class="biz-card">
+      <div class="biz-header">
+        <div class="biz-flag">🇦🇷</div>
+        <div class="biz-name">Negocio ARS</div>
+        <div class="biz-subtitle">Bplay, Modo, Payway y otros</div>
+      </div>
+      <div class="biz-rows">
+        <div class="biz-row head">
+          <span>Año</span>
+          <span style="text-align:right">Revenue</span>
+          <span style="text-align:right">Gross Margin</span>
+          <span style="text-align:right">GM%</span>
+          <span style="text-align:right">Profit</span>
+        </div>
+        <div class="biz-row">
+          <span>2023</span>
+          <span class="biz-rev">ARS$39.2M</span>
+          <span class="biz-rev">ARS$8.5M</span>
+          <span class="biz-gm">21.8%</span>
+          <span class="biz-pft n">-ARS$11.2M</span>
+        </div>
+        <div class="biz-row">
+          <span>2024</span>
+          <span class="biz-rev">ARS$623M</span>
+          <span class="biz-rev">ARS$178M</span>
+          <span class="biz-gm">28.6%</span>
+          <span class="biz-pft p">+ARS$51M</span>
+        </div>
+        <div class="biz-row">
+          <span>2025</span>
+          <span class="biz-rev">ARS$1,186M</span>
+          <span class="biz-rev">ARS$293M</span>
+          <span class="biz-gm" style="color:var(--yellow)">24.7%</span>
+          <span class="biz-pft p">+ARS$6.1M</span>
+        </div>
+        <div class="biz-row">
+          <span>2026<span class="bp">parcial</span></span>
+          <span class="biz-rev">ARS$132M</span>
+          <span class="biz-rev">ARS$41.6M</span>
+          <span class="biz-gm" style="color:var(--green)">31.5%</span>
+          <span class="biz-pft n">-ARS$11.8M</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA USD -->
+    <div class="biz-card">
+      <div class="biz-header">
+        <div class="biz-flag">🇺🇸</div>
+        <div class="biz-name">Negocio USD</div>
+        <div class="biz-subtitle">Flo Health, Ada Health, Capital y otros</div>
+      </div>
+      <div class="biz-rows">
+        <div class="biz-row head">
+          <span>Año</span>
+          <span style="text-align:right">Revenue</span>
+          <span style="text-align:right">Gross Margin</span>
+          <span style="text-align:right">GM%</span>
+          <span style="text-align:right">Profit</span>
+        </div>
+        <div class="biz-row">
+          <span>2023</span>
+          <span class="biz-rev">$339K</span>
+          <span class="biz-rev">$73.8K</span>
+          <span class="biz-gm">21.7%</span>
+          <span class="biz-pft n">-$14K</span>
+        </div>
+        <div class="biz-row">
+          <span>2024</span>
+          <span class="biz-rev">$518K</span>
+          <span class="biz-rev">$160.2K</span>
+          <span class="biz-gm">31.0%</span>
+          <span class="biz-pft n">-$8.5K</span>
+        </div>
+        <div class="biz-row">
+          <span>2025</span>
+          <span class="biz-rev">$914K</span>
+          <span class="biz-rev">$402.5K</span>
+          <span class="biz-gm" style="color:var(--green)">44.0%</span>
+          <span class="biz-pft p">+$65.7K</span>
+        </div>
+        <div class="biz-row">
+          <span>2026<span class="bp">parcial</span></span>
+          <span class="biz-rev">$172K</span>
+          <span class="biz-rev">$64.1K</span>
+          <span class="biz-gm" style="color:var(--green)">37.2%</span>
+          <span class="biz-pft p">+$16.9K</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /biz-grid -->
+
+  <!-- SECCIÓN 2: MIX REVENUE + TIPO DE CAMBIO -->
+  <div class="g2" style="margin-top:1.2rem">
+
+    <!-- MIX ARS vs USD -->
+    <div class="cc">
+      <div class="ct">
+        <span class="dot" style="background:#6BAAFF"></span>
+        Composición del Revenue por moneda (USD equivalente)
+      </div>
+      <div class="cw h260"><canvas id="chartMix"></canvas></div>
+      <div style="font-size:.7rem;color:var(--muted);margin-top:.5rem;padding:0 .5rem">
+        * El revenue ARS se convierte a USD al tipo de cambio de cada período.
+      </div>
+    </div>
+
+    <!-- TIPO DE CAMBIO IMPLÍCITO -->
+    <div class="cc">
+      <div class="ct">
+        <span class="dot" style="background:#FFD166"></span>
+        Tipo de cambio implícito por año (ARS/USD)
+      </div>
+      <div class="cw h260"><canvas id="chartTC"></canvas></div>
+      <div style="font-size:.7rem;color:var(--muted);margin-top:.5rem;padding:0 .5rem">
+        * Surge de dividir el revenue ARS por su equivalente USD del PNL consolidado.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SECCIÓN 3: CRECIMIENTO REAL VS INFLACIÓN -->
+  <div class="cc" style="margin-top:1.2rem">
+    <div class="ct">
+      <span class="dot" style="background:var(--green)"></span>
+      Negocio ARS: crecimiento real vs inflación argentina
+    </div>
+    <div class="cw h280"><canvas id="chartInflacion"></canvas></div>
+  </div>
+
+  <!-- CARDS RESUMEN INFLACIÓN -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem">
+      <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">2024 vs 2023</div>
+      <div style="display:flex;flex-direction:column;gap:.4rem">
+        <div style="display:flex;justify-content:space-between;font-size:.82rem">
+          <span style="color:var(--muted)">Inflación 2024</span>
+          <span style="color:var(--red);font-weight:700">+118.7%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem">
+          <span style="color:var(--muted)">Crecimiento nominal Ramped</span>
+          <span style="color:var(--text);font-weight:700">+1,489%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem">
+          <span style="color:var(--muted)">Crecimiento real</span>
+          <span style="color:var(--green);font-weight:700">+627%</span>
+        </div>
+        <div style="border-top:1px solid var(--border);margin-top:.4rem;padding-top:.4rem;display:flex;justify-content:space-between;font-size:.78rem">
+          <span style="color:var(--muted)">Mínimo para empatar inflación</span>
+          <span style="color:var(--muted)">ARS$85.7M</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.78rem">
+          <span style="color:var(--muted)">Real alcanzado</span>
+          <span style="color:var(--green)">ARS$623M ✓</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem">
+      <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">2025 vs 2024</div>
+      <div style="display:flex;flex-direction:column;gap:.4rem">
+        <div style="display:flex;justify-content:space-between;font-size:.82rem">
+          <span style="color:var(--muted)">Inflación 2025</span>
+          <span style="color:var(--red);font-weight:700">+31.5%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem">
+          <span style="color:var(--muted)">Crecimiento nominal Ramped</span>
+          <span style="color:var(--text);font-weight:700">+90.4%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem">
+          <span style="color:var(--muted)">Crecimiento real</span>
+          <span style="color:var(--green);font-weight:700">+44.8%</span>
+        </div>
+        <div style="border-top:1px solid var(--border);margin-top:.4rem;padding-top:.4rem;display:flex;justify-content:space-between;font-size:.78rem">
+          <span style="color:var(--muted)">Mínimo para empatar inflación</span>
+          <span style="color:var(--muted)">ARS$819M</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.78rem">
+          <span style="color:var(--muted)">Real alcanzado</span>
+          <span style="color:var(--green)">ARS$1,186M ✓</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+<!-- FIN TAB 2 -->
+
+<!-- ══ TAB 3 ═══════════════════════════════════════════════════════════════ -->
+<div id="tab3" class="panel" style="display:none">
+  <p class="slabel">Ranking de clientes — histórico acumulado en USD</p>
+
+  <div class="gWN">
+    <div class="cc">
+      <div class="ct"><span class="dot" style="background:var(--primary)"></span>Gross Margin % por cliente — ordenado mayor a menor</div>
+      <div class="cw h280"><canvas id="chartMargin"></canvas></div>
+    </div>
+    <div class="cc">
+      <div class="ct"><span class="dot" style="background:#f8c56d"></span>% del negocio total</div>
+      <div class="cw h280"><canvas id="chartPie"></canvas></div>
+    </div>
+  </div>
+
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:1rem">
+    <table class="dtable">
+      <thead><tr>
+        <th>#</th><th>Cliente</th>
+        <th class="num">Revenue USD</th><th class="num">Costo USD</th>
+        <th class="num">Gross Profit</th><th class="num">Margen %</th>
+        <th class="num">% Negocio</th>
+      </tr></thead>
+      <tbody id="clientTbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Card: Altas último mes -->
+  <div id="altasMes"></div>
+
+  <!-- KPI retención -->
+  <div id="retencionKpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-top:1.2rem"></div>
+
+  <!-- Chart: nuevos vs retenidos vs perdidos -->
+  <div class="cc" style="margin-top:1.2rem">
+    <div class="ct"><span class="dot" style="background:var(--green)"></span>Nuevos vs Retenidos vs Perdidos por año</div>
+    <div class="cw h240"><canvas id="chartRetencion"></canvas></div>
+  </div>
+
+  <!-- Tabla clientes activos 2026 -->
+  <p class="slabel" style="margin-top:1.5rem">Clientes activos 2026</p>
+  <div id="tabla2026clientes" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:.5rem"></div>
+</div>
+
+<!-- ══ TAB 4 ═══════════════════════════════════════════════════════════════ -->
+<div id="tab4" class="panel" style="display:none">
+  <p class="slabel">Estructura y eficiencia de los gastos operativos</p>
+
+  <!-- 4 KPI cards -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.2rem">
+    <div class="ycard win">
+      <div class="yc-yr">SGA Total 2025</div>
+      <div class="yc-rev">$536,738</div>
+      <div class="yc-gm">30.0% del revenue</div>
+    </div>
+    <div class="ycard win">
+      <div class="yc-yr">SGA Proyectado 2026</div>
+      <div class="yc-rev">$714,930</div>
+      <div class="yc-gm">27.0% del objetivo anual</div>
+    </div>
+    <div class="ycard win">
+      <div class="yc-yr">Variación vs 2025</div>
+      <div class="yc-rev" style="color:var(--yellow)">+33.2%</div>
+      <div class="yc-gm">Aumento proyectado</div>
+    </div>
+    <div class="ycard win">
+      <div class="yc-yr">Target SGA%</div>
+      <div class="yc-rev">≤25%</div>
+      <div class="yc-gm">del revenue anual</div>
+    </div>
+  </div>
+
+  <!-- Composición + Semáforo -->
+  <div class="g2" style="margin-bottom:1.2rem">
+    <div class="cc">
+      <div class="ct"><span class="dot" style="background:var(--primary)"></span>Composición SGA 2026 proyectado</div>
+      <div class="cw h260"><canvas id="chartSgaDona"></canvas></div>
+    </div>
+    <div class="cc">
+      <div class="ct"><span class="dot" style="background:var(--yellow)"></span>Semáforo mensual — SGA% del Revenue</div>
+      <div id="sgaSemaforo"></div>
+      <p style="font-size:.68rem;color:var(--muted);margin-top:.75rem">* Marzo refleja datos parciales — cierre pendiente</p>
+    </div>
+  </div>
+
+  <!-- Evolución SGA vs Revenue -->
+  <div class="cc">
+    <div class="ct"><span class="dot" style="background:var(--red)"></span>Evolución SGA Total vs Revenue anual</div>
+    <div class="cw h260"><canvas id="chartSgaEvo"></canvas></div>
+  </div>
+</div>
+
+<!-- ══ TAB 5 ═══════════════════════════════════════════════════════════════ -->
+<div id="tab5" class="panel" style="display:none">
+
+  <div class="big-prog">
+    <div class="bp-hdr">
+      <div>
+        <div class="bp-title">Objetivo anual 2026 — $2,647,212 USD</div>
+        <div class="bp-sub">50% crecimiento sobre 2025 ($1,764,808 × 1.50) | Distribuido según estacionalidad 2025</div>
+      </div>
+      <div class="bp-pct" id="bpPct">10.1%</div>
+    </div>
+    <div class="bp-track">
+      <div class="bp-fill" id="bpFill" style="width:10.1%;background:var(--yellow)">
+        <span class="bp-fill-lbl">$266,936 logrado</span>
+      </div>
+    </div>
+    <div class="bp-stats">
+      <div><div class="bp-sv">$266,936</div><div class="bp-sl">Logrado Ene-Feb</div></div>
+      <div><div class="bp-sv">$2,380,276</div><div class="bp-sl">Por lograr</div></div>
+      <div><div class="bp-sv">10 meses</div><div class="bp-sl">Restantes</div></div>
+      <div><div class="bp-sv">$238,028</div><div class="bp-sl">Promedio mensual necesario</div></div>
+    </div>
+  </div>
+
+  <div class="gap-card" style="background:rgba(0,200,150,.07);border-color:rgba(0,200,150,.25)">
+    <div>
+      <div class="gap-num" style="color:var(--green)">+$6,940</div>
+      <div style="font-size:.68rem;color:var(--muted);margin-top:2px">EXCEDENTE ACU.</div>
+    </div>
+    <div class="gap-txt">
+      Enero superó el target en <span style="color:var(--green)">+$19,638</span>.
+      Febrero quedó <span>$12,698 debajo</span>. Resultado acumulado Ene-Feb:
+      <span style="color:var(--green)">+$6,940 sobre el target</span>.
+      El Target Ajustado reduce los meses restantes en <span>-$694/mes</span>.
+    </div>
+  </div>
+
+  <div class="cc" style="margin-bottom:1rem">
+    <div class="ct">
+      <span class="dot" style="background:var(--yellow)"></span>
+      Target Original vs Target Ajustado vs Real — 2026
+    </div>
+    <div class="cw h240"><canvas id="chartObj"></canvas></div>
+  </div>
+
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+    <table class="otable">
+      <thead><tr>
+        <th>Mes</th>
+        <th class="num">Target Orig.</th>
+        <th class="num">Target Ajust. <span style="color:var(--yellow)">★</span></th>
+        <th class="num">Real</th>
+        <th class="num">% Logrado</th>
+        <th>Progreso</th>
+        <th style="text-align:center">Estado</th>
+      </tr></thead>
+      <tbody id="objTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ TAB 6 ═══════════════════════════════════════════════════════════════ -->
+<div id="tab6" class="panel" style="display:none">
+  <p class="slabel">Acciones concretas para alcanzar $2,647,212 USD en 2026</p>
+
+  <div class="insight" style="margin-bottom:1.5rem">
+    <div class="ci">🎯</div>
+    <div>El objetivo de 2026 requiere un <strong>crecimiento del 50%</strong> sobre 2025. Con $266,936 logrados en Enero-Febrero y un excedente de +$6,940 sobre el target, el inicio es positivo. Las siguientes 7 acciones son las palancas con mayor impacto.</div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-num">1</div>
+    <div class="rec-body">
+      <div class="rec-title"><span class="ri">🌍</span> Sumar 8–10 clientes nuevos en USD</div>
+      <div class="rec-context">Ticket promedio de clientes nuevos (Capital, Paired, WeWoo): <strong>~$85,000 USD anuales</strong>. Para cerrar el objetivo faltan clientes de alto ticket. Un pipeline de 10 nuevos contratos aporta ~$850,000 USD.</div>
+      <div class="rec-actions">
+        <div class="rec-action">Objetivo: cerrar 1 cliente nuevo por mes desde Marzo 2026.</div>
+        <div class="rec-action">Priorizar sectores con experiencia previa: fintech, salud, apps mobile.</div>
+        <div class="rec-action">Usar los casos de éxito de Flo Health y Ada Health como social proof.</div>
+      </div>
+      <span class="rec-impact">↑ Impacto potencial: +$680,000–$850,000 USD</span>
+    </div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-num">2</div>
+    <div class="rec-body">
+      <div class="rec-title"><span class="ri">💎</span> Retener y crecer Flo Health</div>
+      <div class="rec-context">Flo Health = <strong>54% del revenue 2025</strong>. Revenue histórico acumulado: $964K. Si crece un 20% en 2026 aporta <strong>$182,000 USD extra</strong> sobre el baseline.</div>
+      <div class="rec-actions">
+        <div class="rec-action">Renovar contrato y ampliar scope antes de Q2 — es la prioridad #1.</div>
+        <div class="rec-action">Proponer nuevos formatos: campaña always-on, verticales nuevas, audiencias nuevas.</div>
+        <div class="rec-action">Asignar account manager dedicado y reuniones mensuales de negocio.</div>
+      </div>
+      <span class="rec-impact">↑ Impacto potencial: +$100,000–$200,000 USD</span>
+    </div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-num">3</div>
+    <div class="rec-body">
+      <div class="rec-title"><span class="ri">🔁</span> Reactivar Ada Health</div>
+      <div class="rec-context">Ada Health cayó de <strong>$228,796 (2024) a $54,750 (2025)</strong> — caída del 76%. Revenue histórico acumulado: $539K. Recuperar a niveles 2024 suma <strong>$174,000 USD</strong> al objetivo.</div>
+      <div class="rec-actions">
+        <div class="rec-action">Revisión comercial urgente en Q1: ¿pérdida de cliente o reducción de scope?</div>
+        <div class="rec-action">Presentar propuesta de reactivación con métricas de performance históricas.</div>
+        <div class="rec-action">Si no es recuperable, identificar cliente de reemplazo de ticket similar.</div>
+      </div>
+      <span class="rec-impact">↑ Impacto potencial: +$100,000–$174,000 USD</span>
+    </div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-num">4</div>
+    <div class="rec-body">
+      <div class="rec-title"><span class="ri">⚖️</span> Diversificar para reducir concentración en Flo Health</div>
+      <div class="rec-context">Con el objetivo en $2,647,212 USD, el tope del 25% por cliente implica que <strong>ningún cliente supere $661,803 USD anuales</strong>. Flo en 2025 fue ~$966K estimado — ya supera ese umbral.</div>
+      <div class="rec-actions">
+        <div class="rec-action">Objetivo: 4 clientes de ticket medio ($200–300K/año) para 2026.</div>
+        <div class="rec-action">No rechazar más revenue de Flo, sino crecer otros clientes en paralelo más rápido.</div>
+        <div class="rec-action">Métrica de seguimiento: % del cliente #1 sobre revenue total (target < 35% para fin de 2026).</div>
+      </div>
+      <span class="rec-impact">↓ Reduce riesgo de concentración a nivel aceptable</span>
+    </div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-num">5</div>
+    <div class="rec-body">
+      <div class="rec-title"><span class="ri">📉</span> Controlar SG&A: presupuesto $714,930 (27% del revenue)</div>
+      <div class="rec-context">Presupuesto 2026 definido en <strong>$714,930 USD</strong> (27% del revenue objetivo). Target aspiracional: bajar al 25% ($661,803) mediante recortes en viajes y eventos. En 2025 el SG&A fue $536,738 = 30.4% del revenue. Si el revenue no llega al objetivo, el SG&A debe ajustarse proporcionalmente.</div>
+      <div class="rec-actions">
+        <div class="rec-action">Congelar contrataciones hasta que el pipeline de nuevos clientes esté confirmado.</div>
+        <div class="rec-action">Revisar y justificar gastos de viaje: +169% de 2024 a 2025 no puede repetirse.</div>
+        <div class="rec-action">Establecer SG&A budget trimestral con alertas automáticas al 80% y 100%.</div>
+      </div>
+      <span class="rec-impact">↑ Impacto en profit: cada $100K menos en SG&A = $100K más de profit neto</span>
+    </div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-num">6</div>
+    <div class="rec-body">
+      <div class="rec-title"><span class="ri">🇦🇷</span> Crecer el negocio ARS en términos reales</div>
+      <div class="rec-context">El margen ARS 2025 fue <strong>solo 0.5%</strong> sobre ARS$1,186M de revenue. Para 2026 el objetivo debe ser <strong>ARS$2,000M+ con margen del 5%+ real</strong> (ajustado por inflación). El negocio ARS en 2026 parcial ya está en pérdida (-ARS$11.8M).</div>
+      <div class="rec-actions">
+        <div class="rec-action">Repricing de contratos locales: ajustar a inflación interanual + spread de margen.</div>
+        <div class="rec-action">Revisar estructura de costos ARS: identificar qué costo creció más que el revenue.</div>
+        <div class="rec-action">Evaluar si contratos actuales son rentables en USD efectivo o solo nominalmente.</div>
+      </div>
+      <span class="rec-impact">↑ Meta: ARS$2,000M+ revenue con margen ≥ 5% real</span>
+    </div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-num">7</div>
+    <div class="rec-body">
+      <div class="rec-title"><span class="ri">⏰</span> Mantener el excedente de Enero en los meses siguientes</div>
+      <div class="rec-context">Excedente acumulado Ene-Feb: <strong>+$6,940</strong>. El Target Ajustado reduce los meses restantes en <strong>-$694/mes</strong>. Q2 (May–Jun) es históricamente fuerte — consolidar ahí la ventaja.</div>
+      <div class="rec-actions">
+        <div class="rec-action">Cerrar Marzo y Abril por encima del Target Ajustado ($196,505 y $182,900).</div>
+        <div class="rec-action">Seguimiento semanal del pipeline Q1: deals en negociación vs deals cerrados.</div>
+        <div class="rec-action">Si Marzo también queda corto, recalcular y redistribuir el gap acumulado en Q2.</div>
+      </div>
+      <span class="rec-impact">⚡ Urgente: si el gap supera $150K antes de Q2, el objetivo anual queda en riesgo</span>
+    </div>
+  </div>
+</div>
+
+<footer>Ramped 2.0 · PNL Executive Dashboard · Todos los montos en USD salvo indicación · Datos al Mar 2026</footer>
+
+<script>
+// ── GOOGLE SHEETS CONFIG ──────────────────────────────────────────────────────
+const CONFIG = {
+  SHEET_ID: '1GilxU9-YTIo1XSFxNt-xM6p4SMGN3syYZrpSBd0RVss',
+  API_KEY:  'AIzaSyANrncvbPFxznVlbLqas4Gi7Dtk6Ra2wRM',
+  RANGE:    'PNL!A1:CF300',
+};
+
+// ── SHEET PARSER ──────────────────────────────────────────────────────────────
+function cellNum(v) {
+  if (v == null || v === '') return null;
+  let s = String(v).replace(/[$\s%]/g, '').trim();
+  if (s === '' || s === '-') return null;
+  // Argentine/Spanish: dot = thousands sep (76.625 → 76625), comma = decimal
+  if (s.includes(',')) {
+    // comma present: dots=thousands, comma=decimal  e.g. "1.234,56" → 1234.56
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else {
+    // no comma: if last dot has exactly 3 digits after → thousands separator
+    const ld = s.lastIndexOf('.');
+    if (ld >= 0 && (s.length - ld - 1) === 3) s = s.replace(/\./g, '');
+    // else dot is decimal (1-2 decimal digits), leave as-is
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+function parseSheetData(rows) {
+  console.log('[Sheets] Loaded', rows.length, 'rows ×', (rows[0]||[]).length, 'cols');
+
+  // ── Find year columns by scanning first 30 rows
+  let yearCols = {};
+  for (const row of rows.slice(0, 30)) {
+    if (!row) continue;
+    const hits = {};
+    row.forEach((cell, i) => {
+      const s = String(cell||'').trim();
+      if (['2021','2022','2023','2024','2025','2026'].includes(s)) hits[s] = i;
+    });
+    if (Object.keys(hits).length >= 3) {
+      Object.assign(yearCols, hits);
+      if (Object.keys(yearCols).length >= 5) break;
+    }
+  }
+  console.log('[Sheets] yearCols:', yearCols);
+
+  // ── Find month columns (Ene..Dic)
+  const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  let monthCols = [];
+  for (const row of rows) {
+    if (!row) continue;
+    const pos = MESES.map(m => row.findIndex(c => String(c||'').trim().toLowerCase().startsWith(m.toLowerCase())));
+    if (pos.filter(p => p >= 0).length >= 10) { monthCols = pos; break; }
+  }
+  console.log('[Sheets] monthCols:', monthCols);
+
+  // ── Helpers
+  function findRow(lbl, from=0, to=rows.length) {
+    const lc = lbl.toLowerCase();
+    for (let i = from; i < Math.min(to, rows.length); i++) {
+      const row = rows[i]; if (!row) continue;
+      const a = String(row[0]||'').toLowerCase().trim();
+      if (a.includes(lc)) return row;
+    }
+    return null;
+  }
+  function yearly(row, years) {
+    if (!row) return null;
+    const vals = years.map(yr => yearCols[yr] != null ? cellNum(row[yearCols[yr]]) : null);
+    return vals.some(v => v !== null) ? vals : null;
+  }
+  function monthly(row) {
+    if (!row || !monthCols.length) return null;
+    const vals = monthCols.map(i => i >= 0 && i < row.length ? cellNum(row[i]) : null);
+    return vals.some(v => v !== null) ? vals : null;
+  }
+
+  // Column layout: each year block = 12 month cols + 1 total col (13 cols/year)
+  // 2021→cols 1-12, 2022→14-25, 2023→27-38, 2024→40-51, 2025→53-64, 2026→66-77
+  const YEAR_COL_START = { '2021':1,'2022':14,'2023':27,'2024':40,'2025':53,'2026':66 };
+  function monthsFromCol(row, startCol) {
+    if (!row) return null;
+    const vals = [];
+    for (let i = 0; i < 12; i++) {
+      const idx = startCol + i;
+      vals.push(idx < row.length ? cellNum(row[idx]) : null);
+    }
+    return vals;
+  }
+
+  const out = {};
+  const YALL = ['2021','2022','2023','2024','2025','2026'];
+  const YARS = ['2023','2024','2025','2026'];
+
+  // ── Block 1: Consolidated USD (sheet rows 1-26 → array rows 0-25)
+  const r_rev  = findRow('revenue',0,26) || findRow('ingreso',0,26) || findRow('venta',0,26);
+  const r_cogs = findRow('cogs',0,26) || findRow('costo directo',0,26);
+  const r_prof = findRow('net profit',0,26) || findRow('profit',0,26) || findRow('resultado',0,26);
+  const r_gm   = findRow('gross margin',0,26) || findRow('margen bruto',0,26);
+  const r_sal  = findRow('salary',0,26) || findRow('salario',0,26) || findRow('sueldo',0,26);
+  const r_trav = findRow('travel',0,26) || findRow('viaje',0,26);
+  const r_opex = findRow('opex',0,26) || findRow('sg&a',0,26) || findRow('gasto operativo',0,26);
+  if (r_rev)  out.revenue = yearly(r_rev, YALL);
+  if (r_cogs) out.cogs    = yearly(r_cogs, YALL);
+  if (r_prof) out.profit  = yearly(r_prof, YALL);
+  if (r_gm)   out.gm      = yearly(r_gm, YALL);
+  if (r_sal)  out.salary  = yearly(r_sal, YALL);
+  if (r_trav) out.travel  = yearly(r_trav, YALL);
+  if (r_opex) out.opex    = yearly(r_opex, YALL);
+
+  // ── Block 2: ARS (sheet rows 27-51 → array rows 26-50)
+  const ra_rev  = findRow('revenue',26,51) || findRow('ingreso',26,51) || findRow('venta',26,51);
+  const ra_prof = findRow('profit',26,51) || findRow('resultado',26,51) || findRow('ganancia',26,51);
+  if (ra_rev)  out.arsRev    = yearly(ra_rev, YARS);
+  if (ra_prof) out.arsProfit = yearly(ra_prof, YARS);
+
+  // ── Block 3: USD (sheet rows 52+ → array rows 51+)
+  const ru_rev  = findRow('revenue',51,100) || findRow('ingreso',51,100) || findRow('venta',51,100);
+  const ru_prof = findRow('profit',51,100) || findRow('resultado',51,100) || findRow('ganancia',51,100);
+  if (ru_rev)  out.usdRev    = yearly(ru_rev, YARS);
+  if (ru_prof) out.usdProfit = yearly(ru_prof, YARS);
+
+  // ── Monthly consolidated USD revenue
+  const m24 = findRow('2024',0,26); const m25 = findRow('2025',0,26); const m26 = findRow('2026',0,26);
+  if (m24) out.rev24 = monthly(m24);
+  if (m25) out.rev25 = monthly(m25);
+  if (m26) out.rev26 = monthly(m26);
+
+  // ── Monthly profit USD
+  const mp24 = findRow('profit 2024',0,26) || findRow('profit24',0,26);
+  const mp25 = findRow('profit 2025',0,26) || findRow('profit25',0,26);
+  if (mp24) out.profit24 = monthly(mp24);
+  if (mp25) out.profit25 = monthly(mp25);
+
+  // ── Monthly ARS revenue
+  const a24 = findRow('2024',26,51); const a25 = findRow('2025',26,51); const a26 = findRow('2026',26,51);
+  if (a24) out.arsRev24m = monthly(a24);
+  if (a25) out.arsRev25m = monthly(a25);
+  if (a26) out.arsRev26m = monthly(a26);
+
+  // ── Real 2026 performance and targets (for Tab 5)
+  const rReal   = findRow('real',0,200) || findRow('actual',0,200) || findRow('logrado',0,200);
+  const rTarget = findRow('target',0,200) || findRow('objetivo',0,200) || findRow('meta',0,200);
+  if (rReal)   out.real26    = monthly(rReal);
+  if (rTarget) out.targets26 = monthly(rTarget);
+
+  // ── Monthly breakdown for ALL years (Revenue, COGS, Total SG&A)
+  const r_sgaTotal = findRow('total sg&a', 0, 26) || findRow('total sga', 0, 26);
+  const mRevAll = {}, mCogsAll = {}, mSgaAll = {};
+  for (const [yr, startCol] of Object.entries(YEAR_COL_START)) {
+    if (r_rev)      mRevAll[yr]  = monthsFromCol(r_rev,      startCol);
+    if (r_cogs)     mCogsAll[yr] = monthsFromCol(r_cogs,     startCol);
+    if (r_sgaTotal) mSgaAll[yr]  = monthsFromCol(r_sgaTotal, startCol);
+  }
+  out.mRevAll  = mRevAll;
+  out.mCogsAll = mCogsAll;
+  out.mSgaAll  = mSgaAll;
+
+  const nParsed = Object.values(out).filter(v => v !== null).length;
+  console.log('[Sheets] Parsed', nParsed, 'fields:', Object.keys(out).filter(k => out[k]));
+  return out;
+}
+
+function mergeSheetData(parsed) {
+  // Arrays → update D fields
+  for (const [key, val] of Object.entries(parsed)) {
+    if (Array.isArray(val) && val.some(v => v !== null)) {
+      D[key] = val;
+      console.log('[Sheets] Updated D.' + key);
+    }
+  }
+  // Monthly by year → populate DATA.monthlyByYear
+  if (parsed.mRevAll || parsed.mCogsAll || parsed.mSgaAll) {
+    if (!DATA.monthlyByYear) DATA.monthlyByYear = {};
+    const YEARS = ['2021','2022','2023','2024','2025','2026'];
+    YEARS.forEach(yr => {
+      if (!DATA.monthlyByYear[yr]) DATA.monthlyByYear[yr] = {};
+      if (parsed.mRevAll?.[yr])  DATA.monthlyByYear[yr].rev  = parsed.mRevAll[yr];
+      if (parsed.mCogsAll?.[yr]) DATA.monthlyByYear[yr].cogs = parsed.mCogsAll[yr];
+      if (parsed.mSgaAll?.[yr])  DATA.monthlyByYear[yr].sga  = parsed.mSgaAll[yr];
+    });
+    console.log('[Sheets] Updated DATA.monthlyByYear for', Object.keys(DATA.monthlyByYear));
+  }
+}
+
+// ── LOAD / RETRY / FALLBACK ───────────────────────────────────────────────────
+async function loadSheetData() {
+  const overlay = document.getElementById('gsOverlay');
+  const errDiv  = document.getElementById('gsError');
+  const msgEl   = document.getElementById('gsMsg');
+
+  overlay.style.display = '';
+  overlay.classList.remove('hidden');
+  errDiv.classList.remove('visible');
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/`
+            + `${encodeURIComponent(CONFIG.RANGE)}?key=${CONFIG.API_KEY}`;
+
+  try {
+    msgEl.textContent = 'Conectando con Google Sheets...';
+    const res = await fetch(url);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.error?.message || `HTTP ${res.status}`);
+    }
+    const json = await res.json();
+    const rows = json.values || [];
+    if (rows.length === 0) throw new Error('La hoja PNL está vacía o no tiene datos.');
+
+    msgEl.textContent = 'Procesando datos...';
+    const parsed = parseSheetData(rows);
+    mergeSheetData(parsed);
+
+    // Update header badge to live timestamp
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const badge = document.querySelector('.hb-date');
+    if (badge) badge.innerHTML = `✓ Live · ${pad(now.getDate())}/${pad(now.getMonth()+1)} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    // Fade out overlay then initialize
+    overlay.classList.add('hidden');
+    setTimeout(() => {
+      overlay.style.display = 'none';
+      if (!tabInit[1]) { tabInit[1] = true; buildTab1(); }
+    }, 420);
+
+  } catch (err) {
+    console.error('[Sheets] Error:', err);
+    overlay.classList.add('hidden');
+    setTimeout(() => overlay.style.display = 'none', 420);
+    document.getElementById('gsErrMsg').textContent =
+      `Error: ${err.message}. Se muestran los últimos datos guardados.`;
+    errDiv.classList.add('visible');
+  }
+}
+
+function retryLoad() {
+  loadSheetData();
+}
+
+function useFallback() {
+  document.getElementById('gsError').classList.remove('visible');
+  if (!tabInit[1]) { tabInit[1] = true; buildTab1(); }
+}
+
+// ── DATA 2026 ─────────────────────────────────────────────────────────────────
+const DATA = {
+  rev2026:  { 1: 134600, 2: 132400, 3: 11844 },
+  cogs2026: { 1: -87400, 2: -85500, 3: -8100 },
+  sga2026:  { 1: -39800, 2: -41700, 3: -10000 },
+  rev2025:  { 1: 98200,  2: 110400, 3: 95600 },
+  sga2025Total: 536738,
+  sga2025Cat: { salarios:332000, viajes:91600, honorarios:55000, operativos:39000, bancarios:19138 },
+  sga2026Proj: { salarios:191751, fees:48000, viajes:70000, bancarios:5000, impuestos:25000, operativos:12000 },
+  mixARS: { 2023:85, 2024:50, 2025:49, 2026:65 },
+  mixUSD: { 2023:15, 2024:50, 2025:51, 2026:35 },
+  crecReal: { 2024:627, 2025:44.8 },
+  inflacion: { 2024:118.7, 2025:31.5 },
+  tcImplicito: { 2023:655, 2024:1186, 2025:1354, 2026:1395 },
+  primeraFacturacion: {
+    'Flo Health':                    { año:2024, mes:1 },
+    'LearnWords':                    { año:2025, mes:3 },
+    'Newry Global Media - WeWoo':    { año:2026, mes:1 },
+    'Stake':                         { año:2026, mes:3 },
+  },
+  revClienteMes: {
+    'Flo Health':                 { 1:43600, 2:43125 },
+    'LearnWords':                 { 2:6000 },
+    'Newry Global Media - WeWoo': { 1:53307, 2:26253 },
+    'Stake':                      { 3:11844 },
+  },
+  retencion: {
+    2024: { retenidos:3, nuevos:6,  perdidos:4 },
+    2025: { retenidos:6, nuevos:14, perdidos:2 },
+    2026: { retenidos:3, nuevos:2,  perdidos:0 },
+  },
+};
+function ultimoMesCerrado() {
+  return Math.max(...Object.keys(DATA.rev2026).map(Number));
+}
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const D = {
+  years:   ['2021','2022','2023','2024','2025','2026*'],
+  revenue: [49229, 158348, 399054, 1042570, 1790008, 266936],
+  cogs:    [33026, 115526, 307926, 732044, 1180160, 172965],
+  salary:  [null,  null,  null,  178628, 331702,  null],
+  travel:  [null,  null,  null,  33987,  91526,   null],
+  opex:    [50542, 104724, 163647, 82154, 113510,  81968],
+  profit:  [-34339,-61902,-38518, 38064,  81864,  12003],
+  gm:      [32.9,  27.0,  22.8,  29.8,   34.1,   35.2],
+
+  arsYears:  ['2023','2024','2025','2026*'],
+  arsRev:    [39202528, 622966827, 1186002118, 132038000],
+  arsProfit: [-11221769, 51050258,  6146642,   -11762658],
+
+  usdRev:    [339250, 517561, 913968, 172285],
+  usdProfit: [-14051, -8504,  65712,  16893],
+
+  months: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+  arsRev24m: [14690000,26661250,31484000,36425600,46601600,50544250,52818000,63968125,68160626,89330626,64113750,78169000],
+  arsRev25m: [46736818,55112400,74578800,77777000,68473100,92807000,111689500,120459000,208346200,123076000,120124300,86822000],
+  arsRev26m: [52548800,79489200,null,null,null,null,null,null,null,null,null,null],
+
+  rev24:    [53550,99091,58478,72607,74380,65308,82401,77649,87319,124382,104197,143210],
+  rev25:    [76625,121705,131466,122396,188825,220413,205856,189205,159978,155324,112871,105344],
+  rev26:    [134576,132360,null,null,null,null,null,null,null,null,null,null],
+  profit24: [-5718,1056,7103,-3967,-17684,-3088,10473,-4129,5560,13663,29000,5796],
+  profit25: [-5548,21872,15564,-1343,-1721,19916,11580,13928,289,11880,623,-5177],
+
+  clients: [
+    { name:'Flo Health',  rev:964325, cost:587118, gp:377207, mg:39.1, pct:33.0 },
+    { name:'Ada Health',  rev:539614, cost:267873, gp:271741, mg:50.4, pct:18.5 },
+    { name:'Bplay',       rev:310589, cost:227238, gp:83351,  mg:26.8, pct:10.7 },
+    { name:'Modo',        rev:150936, cost:116497, gp:34439,  mg:22.8, pct:5.2  },
+    { name:'Capital',     rev:93750,  cost:48716,  gp:45034,  mg:48.1, pct:3.2  },
+    { name:'Paired',      rev:92337,  cost:46775,  gp:45562,  mg:49.4, pct:3.2  },
+    { name:'WeWoo',       rev:79560,  cost:56925,  gp:22635,  mg:28.5, pct:2.7  },
+    { name:'Aba English', rev:48612,  cost:16617,  gp:31995,  mg:65.8, pct:1.7  },
+    { name:'Tandem',      rev:37414,  cost:13074,  gp:24340,  mg:65.1, pct:1.3  },
+  ],
+
+  targets26:  [114938,145058,197199,183594,283238,330620,308784,283808,239967,232686,169307,158016],
+  adjusted26: [114938,145058,196505,182900,282544,329926,308090,283114,239273,231992,168613,157322],
+  real26:     [134576,132360,null,null,null,null,null,null,null,null,null,null],
+};
+
+// ── FORMATTERS ────────────────────────────────────────────────────────────────
+function fmtU(n, plus=false) {
+  if (n === null || n === undefined) return '—';
+  const a = Math.abs(n), s = n < 0 ? '-' : (plus ? '+' : '');
+  if (a >= 1e6) return s + '$' + (a/1e6).toFixed(2) + 'M';
+  if (a >= 1e3) return s + '$' + a.toLocaleString('en-US');
+  return s + '$' + a.toFixed(0);
+}
+function fmtUk(n) {
+  if (n === null || n === undefined) return '—';
+  const a = Math.abs(n), s = n < 0 ? '-' : '';
+  if (a >= 1e6) return s + '$' + (a/1e6).toFixed(2) + 'M';
+  if (a >= 1e3) return s + '$' + (a/1e3).toFixed(1) + 'K';
+  return s + '$' + a.toFixed(0);
+}
+function fmtARS(n) {
+  if (n === null || n === undefined) return '—';
+  const a = Math.abs(n), s = n < 0 ? '-' : '';
+  if (a >= 1e9) return s + 'ARS$' + (a/1e6).toFixed(0) + 'M';
+  if (a >= 1e6) return s + 'ARS$' + (a/1e6).toFixed(1) + 'M';
+  return s + 'ARS$' + a.toLocaleString('en-US');
+}
+function fmtARSk(n) {
+  if (n === null || n === undefined) return '—';
+  const a = Math.abs(n), s = n < 0 ? '-' : '';
+  if (a >= 1e6) return s + (a/1e6).toFixed(1) + 'M';
+  if (a >= 1e3) return s + (a/1e3).toFixed(0) + 'K';
+  return s + a.toFixed(0);
+}
+// KPI card formatter — exact values, no rounding to nearest K/M
+function formatUSD(n) {
+  if (n === null || n === undefined) return '—';
+  const sign = n < 0 ? '-' : '';
+  const a = Math.abs(n);
+  if (a >= 1e6) return sign + '$' + (a/1e6).toFixed(2) + 'M';
+  if (a >= 1e3) return sign + '$' + (a/1e3).toFixed(1) + 'K';
+  return sign + '$' + a.toLocaleString();
+}
+// GM% is fixed — never computed from sheet values
+const GM_FIXED = [32.9, 27.0, 22.8, 29.8, 34.1, 35.2];
+function mgClass(m) { return m > 45 ? 'mg' : m >= 25 ? 'my' : 'mr'; }
+function pcolor(p) { return p >= 80 ? 'var(--green)' : p >= 50 ? 'var(--yellow)' : 'var(--red)'; }
+
+// ── CHART DEFAULTS ────────────────────────────────────────────────────────────
+Chart.defaults.color = '#7b8099';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+Chart.defaults.font.size = 11;
+const CH = {};
+
+// ── TAB SYSTEM ────────────────────────────────────────────────────────────────
+const tabInit = {};
+// ── FORECAST ──────────────────────────────────────────────────────────────────
+function saveForecast(el) {
+  // Mantener formato con comas mientras escribe
+  let raw = el.value.replace(/[^0-9]/g, '');
+  const num = parseInt(raw) || 0;
+  const formatted = num.toLocaleString('en-US');
+  // Solo reformatear si el cursor está al final para no romper la edición
+  el.value = formatted;
+  localStorage.setItem('forecast_rev', raw);
+}
+function saveGmForecast(el) {
+  let raw = el.value.replace(/[^0-9.]/g, '');
+  el.value = raw;
+  localStorage.setItem('forecast_gm', raw);
+}
+function loadForecast() {
+  const raw = localStorage.getItem('forecast_rev') || '220000';
+  const gm  = localStorage.getItem('forecast_gm')  || '30';
+  const elRev = document.getElementById('fRevInput');
+  const elGm  = document.getElementById('fGmInput');
+  if (elRev) elRev.value = parseInt(raw).toLocaleString('en-US');
+  if (elGm)  elGm.value  = gm;
+  // Label dinámico: próximo mes
+  const now  = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const label = next.toLocaleString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
+  const lbl = document.getElementById('forecastLabel');
+  if (lbl) lbl.textContent = 'REV EXPECTED — ' + label;
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
+function showTab(n, btn) {
+  for (let i = 1; i <= 6; i++)
+    document.getElementById('tab'+i).style.display = i === n ? '' : 'none';
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i === n-1));
+  if (!tabInit[n]) { tabInit[n] = true; buildTab(n); }
+}
+function buildTab(n) {
+  const fns = { 1:buildTab1, 2:buildTab2, 3:buildTab3, 4:buildTab4, 5:buildTab5 };
+  if (fns[n]) fns[n]();
+}
+
+// ── YEAR DETAIL ACCORDION ─────────────────────────────────────────────────────
+let _activeYearIdx = null;
+
+function showYearDetail(i) {
+  const panel = document.getElementById('yearExpand');
+
+  // Toggle: clic al mismo año → colapsar
+  if (_activeYearIdx === i) {
+    _activeYearIdx = null;
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+    document.querySelectorAll('.yr-btn').forEach(c => c.classList.remove('yr-active'));
+    return;
+  }
+  _activeYearIdx = i;
+  document.querySelectorAll('.yr-btn').forEach((c,idx) => c.classList.toggle('yr-active', idx===i));
+  panel.style.display = 'block';
+
+  const mesNombres = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                      'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const yr = D.years[i];
+
+  // Obtener datos mensuales: para 2026 usar DATA hardcodeada como fallback, para todos usar monthlyByYear si existe
+  const yrStr = D.years[i];
+  const mby = DATA.monthlyByYear?.[yrStr];
+  let revArr = null, cogsArr = null, sgaArr = null;
+
+  if (i === 5) {
+    // 2026: intentar monthlyByYear, luego fallback a DATA hardcodeada
+    if (mby?.rev) {
+      revArr  = mby.rev;
+      cogsArr = mby.cogs || null;
+      sgaArr  = mby.sga  || null;
+    } else {
+      const mesKeys = Object.keys(DATA.rev2026).map(Number).sort((a,b)=>a-b);
+      revArr  = Array(12).fill(null); cogsArr = Array(12).fill(null); sgaArr = Array(12).fill(null);
+      mesKeys.forEach(m => {
+        revArr[m-1]  = DATA.rev2026[m]  ?? null;
+        cogsArr[m-1] = DATA.cogs2026[m] ?? null;
+        sgaArr[m-1]  = DATA.sga2026[m]  ?? null;
+      });
+    }
+  } else if (mby?.rev) {
+    revArr  = mby.rev;
+    cogsArr = mby.cogs || null;
+    sgaArr  = mby.sga  || null;
+  }
+
+  if (revArr && revArr.some(v => v !== null && v !== 0)) {
+    // Columnas de años anteriores
+    const prevCols = (i > 0 ? [i - 1] : []).map(pi => {
+      const yr = D.years[pi];
+      const rev  = D.revenue[pi] ?? 0;
+      const cogs = -(Math.abs(D.cogs[pi] ?? 0));
+      const gm   = rev + cogs;
+      const np   = D.profit[pi] ?? 0;   // usar D.profit directamente — más confiable
+      const sga  = np - gm;             // SGA = profit − GP (negativo = costo)
+      return {
+        name: yr, rev, cogs, sga, gm, np,
+        gmPct:  rev ? (gm/rev*100).toFixed(1)             : null,
+        sgaPct: rev ? (Math.abs(sga)/rev*100).toFixed(1)  : null,
+        npPct:  rev ? (np/rev*100).toFixed(1)             : null,
+        isPrev: true, isFirst: true,
+      };
+    });
+
+    // Tiene datos — construir columnas por mes
+    const mCols = [];
+    let acumRev=0, acumCogs=0, acumSga=0;
+    revArr.forEach((rev, mi) => {
+      if (rev === null || rev === undefined) return;
+      const cogs = cogsArr?.[mi] ?? 0, sga = sgaArr?.[mi] ?? 0;
+      if (rev === 0 && cogs === 0 && sga === 0) return;
+      const gm=rev+cogs, np=gm+sga;
+      mCols.push({
+        name: mesNombres[mi+1], rev, cogs, sga, gm, np,
+        gmPct:  rev ? (gm/rev*100).toFixed(1)         : null,
+        sgaPct: rev ? (Math.abs(sga)/rev*100).toFixed(1) : null,
+        npPct:  rev ? (np/rev*100).toFixed(1)         : null,
+      });
+      acumRev+=rev; acumCogs+=cogs; acumSga+=sga;
+    });
+    const agm=acumRev+acumCogs, anp=agm+acumSga;
+    if (mCols.length > 0) mCols[0].isFirstMonth = true;
+    mCols.push({ // columna Total
+      name:'Total', rev:acumRev, cogs:acumCogs, sga:acumSga, gm:agm, np:anp,
+      gmPct:  acumRev ? (agm/acumRev*100).toFixed(1)             : null,
+      sgaPct: acumRev ? (Math.abs(acumSga)/acumRev*100).toFixed(1) : null,
+      npPct:  acumRev ? (anp/acumRev*100).toFixed(1)             : null,
+      isTotal: true,
+    });
+
+    const allCols = [...prevCols, ...mCols];
+    const SEP  = 'border-left:2px solid rgba(108,99,255,.6);';
+    const SEPM = 'border-left:1px solid rgba(255,255,255,.07);';
+
+    function colStyle(c) {
+      if (c.isFirstMonth) return SEP;
+      if (c.isTotal)      return SEPM;
+      return '';
+    }
+    function thStyle(c) {
+      if (c.isFirstMonth) return `${SEP}`;
+      if (c.isTotal)      return `${SEPM}font-size:.7rem;color:var(--muted)`;
+      if (c.isPrev)       return 'color:var(--muted);font-size:.58rem;padding-left:.15rem;padding-right:.15rem;letter-spacing:-.01em';
+      return '';
+    }
+
+    const thRow = `<tr><th style="text-align:left;min-width:100px">Métrica</th>${allCols.map(c=>{
+      const s=thStyle(c); return `<th class="num"${s?` style="${s}"`:''}>` + (c.isPrev?`<span style="opacity:.7">año ant.<br><span style="font-size:.52rem;opacity:.7">(${c.name})</span></span>`:c.name) + `</th>`;
+    }).join('')}</tr>`;
+
+    function mRow(label, fn, colorFn, rowStyle='') {
+      const cells = allCols.map(c => {
+        const val = fn(c);
+        const col = colorFn ? colorFn(c) : '';
+        const cs  = colStyle(c);
+        const op  = c.isPrev ? 'opacity:.55;font-size:.6rem;padding-left:.15rem;padding-right:.15rem;' : '';
+        return `<td class="num" style="${cs}${op}${col?'color:'+col:''}">${val}</td>`;
+      }).join('');
+      return `<tr style="${rowStyle}"><td style="color:var(--muted);font-size:.75rem;padding-right:1rem">${label}</td>${cells}</tr>`;
+    }
+
+    const gc = c => c.gm>=0?'var(--green)':'var(--red)';
+    const nc = c => c.np>=0?'var(--green)':'var(--red)';
+    const pct = v => v!=null ? v+'%' : '—';
+
+    const filas = [
+      mRow('Revenue',      c => fmtUk(c.rev),  null),
+      mRow('COGS',         c => fmtUk(c.cogs), () => 'var(--muted)'),
+      mRow('Gross Margin', c => fmtUk(c.gm),   gc,  'border-top:1px solid rgba(255,255,255,.08)'),
+      mRow('GM%',          c => pct(c.gmPct),   gc),
+      mRow('SGA',          c => fmtUk(c.sga),  () => 'var(--muted)', 'border-top:1px solid rgba(255,255,255,.08)'),
+      mRow('SGA%',         c => pct(c.sgaPct), () => 'var(--muted)'),
+      mRow('Net Profit',   c => (c.np>=0?'+':'')+fmtUk(c.np), nc, 'border-top:1px solid rgba(255,255,255,.08)'),
+      mRow('NP%',          c => (c.np>=0?'+':'')+pct(c.npPct), nc),
+    ].join('');
+
+    const agc=agm>=0?'var(--green)':'var(--red)', anc=anp>=0?'var(--green)':'var(--red)';
+
+    // Comparativa solo para 2026
+    let comparativaHtml = '';
+    if (i === 5) {
+      const ultimo = ultimoMesCerrado();
+      const mesKeys26 = Object.keys(DATA.rev2026).map(Number).sort((a,b)=>a-b);
+      const rev26acc = mesKeys26.filter(m=>m<=ultimo).reduce((s,m)=>s+(DATA.rev2026[m]||0),0);
+      const rev25mby = DATA.monthlyByYear?.['2025']?.rev;
+      let rev25acc = 0;
+      if (rev25mby) {
+        for (let m=1; m<=ultimo; m++) rev25acc += rev25mby[m-1] || 0;
+      } else {
+        mesKeys26.filter(m=>m<=ultimo&&DATA.rev2025[m]).forEach(m=>{ rev25acc += DATA.rev2025[m]; });
+      }
+      const varPct = rev25acc ? ((rev26acc-rev25acc)/rev25acc*100).toFixed(1) : null;
+      const varColor = varPct>=0?'var(--green)':'var(--red)', varArrow = varPct>=0?'↑':'↓';
+      const mesLabel = mesNombres[ultimo] || 'Mes '+ultimo;
+      comparativaHtml = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;padding:1rem 1.2rem 1.2rem">
+          <div style="background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.2);border-radius:10px;padding:1.2rem;text-align:center">
+            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem">2026 Acum. (Ene–${mesLabel})</div>
+            <div style="font-size:1.8rem;font-weight:800;color:var(--primary)">${fmtU(rev26acc)}</div>
+            <div style="font-size:.7rem;color:var(--muted);margin-top:.3rem">Revenue acumulado</div>
+          </div>
+          <div style="background:rgba(42,47,61,.4);border:1px solid var(--border);border-radius:10px;padding:1.2rem;text-align:center">
+            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem">2025 mismo período (Ene–${mesLabel})</div>
+            <div style="font-size:1.8rem;font-weight:800;color:var(--muted)">${fmtU(rev25acc)}</div>
+            <div style="font-size:.78rem;margin-top:.4rem">
+              <span style="color:${varColor};font-weight:700;font-size:1rem">${varArrow} ${Math.abs(varPct)}%</span>
+              <span style="color:var(--muted)"> vs 2025</span>
+            </div>
+          </div>
+          <div style="background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.2);border-radius:10px;padding:1.2rem;text-align:center">
+            <div id="forecastLabel" style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem">FORECAST PRÓXIMO MES</div>
+            <div style="display:flex;align-items:baseline;justify-content:center;gap:.1rem;margin-bottom:.2rem">
+              <span style="font-size:.85rem;font-weight:800;color:#ffd93d">$</span>
+              <input id="fRevInput" type="text" value="220,000"
+                style="background:transparent;border:none;color:#ffd93d;font-size:1.1rem;font-weight:800;width:90px;outline:none;text-align:center"
+                oninput="saveForecast(this)">
+            </div>
+            <div style="font-size:.65rem;color:var(--muted);margin-bottom:.5rem">Rev Expected (USD)</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:.25rem">
+              <input id="fGmInput" type="text" value="30"
+                style="background:transparent;border:none;color:var(--green);font-size:.95rem;font-weight:700;width:30px;outline:none;text-align:right"
+                oninput="saveGmForecast(this)">
+              <span style="color:var(--green);font-size:.95rem;font-weight:700">% GM</span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    panel.innerHTML = `
+      <div class="yr-expand">
+        <div style="padding:.9rem 1.2rem .5rem;font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted)">
+          PNL Mensual — ${yrStr}
+        </div>
+        <div style="overflow-x:auto">
+          <table class="dtable">
+            <thead>${thRow}</thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </div>
+        ${comparativaHtml}
+      </div>`;
+  } else {
+    panel.innerHTML = `
+      <div class="yr-expand">
+        <div class="yr-no-data">
+          Sin apertura mensual disponible para <strong style="color:var(--text)">${yrStr}</strong>
+        </div>
+      </div>`;
+  }
+}
+
+// ── PNL SUMMARY TABLE ─────────────────────────────────────────────────────────
+let _pnlExp = new Set();
+
+function renderPnlTable() {
+  const YRS  = ['2021','2022','2023','2024','2025','2026'];
+  const LBLS = ['2021','2022','2023','2024','2025','2026*'];
+  const MNM  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // Annual arrays
+  const annRev    = D.revenue.slice();
+  const annCogs   = D.cogs.map(v => v != null ? -Math.abs(v) : null);
+  const annGp     = D.revenue.map((r,i) => r != null && D.cogs[i] != null ? r - Math.abs(D.cogs[i]) : null);
+  const annGm     = GM_FIXED.slice();
+  const annSga    = [0,1,2,3,4,5].map(i => -((D.salary[i]??0)+(D.travel[i]??0)+(D.opex[i]??0)));
+  const annProfit = D.profit.slice();
+
+  // Monthly getters
+  const lastClosed = ultimoMesCerrado(); // e.g. 3 for March
+  function capFuture(arr, yr) {
+    if (yr !== '2026' || !arr) return arr;
+    return arr.map((v, j) => j < lastClosed ? v : null);
+  }
+  function mRev(yr,i)  {
+    let a = DATA.monthlyByYear?.[yr]?.rev;
+    if (!a) {
+      if (yr==='2024') a = D.rev24;
+      else if (yr==='2025') a = D.rev25;
+      else if (yr==='2026') a = D.rev26;
+    }
+    return capFuture(a, yr);
+  }
+  function mCogs(yr,i) {
+    const a = DATA.monthlyByYear?.[yr]?.cogs;
+    return capFuture(a ? a.map(v => v!=null ? -Math.abs(v) : null) : null, yr);
+  }
+  function mSga(yr,i)  {
+    const a = DATA.monthlyByYear?.[yr]?.sga;
+    return capFuture(a ? a.map(v => v!=null ? -Math.abs(v) : null) : null, yr);
+  }
+  function mGp(yr,i) {
+    const r = mRev(yr,i), c = DATA.monthlyByYear?.[yr]?.cogs;
+    if (!r) return null;
+    return r.map((rv,j) => rv!=null && c?.[j]!=null ? rv - Math.abs(c[j]) : null);
+  }
+  function mGm(yr,i) {
+    const r = mRev(yr,i), c = DATA.monthlyByYear?.[yr]?.cogs;
+    if (!r||!c) return null;
+    return r.map((rv,j) => rv&&c[j] ? +((1-Math.abs(c[j])/rv)*100).toFixed(1) : null);
+  }
+  function mProfit(yr,i) {
+    const r = mRev(yr,i), c = DATA.monthlyByYear?.[yr]?.cogs, s = DATA.monthlyByYear?.[yr]?.sga;
+    if (!r) return null;
+    return r.map((rv,j) => rv!=null ? rv - Math.abs(c?.[j]??0) - Math.abs(s?.[j]??0) : null);
+  }
+
+  function fmt$(v,plus=false) {
+    if (v===null||v===undefined) return '—';
+    const p = plus&&v>0?'+':''; return p+fmtUk(v);
+  }
+  function fmtPct(v) { return v!=null ? v+'%' : '—'; }
+  function colorProfit(v) { return v>=0?'var(--secondary)':'#ff6b6b'; }
+  function colorGp(v)     { return v>=0?'var(--secondary)':'#ff6b6b'; }
+
+  // Header
+  let th = `<th class="pnl-lbl">Métrica</th>`;
+  YRS.forEach((yr,i) => {
+    const exp = _pnlExp.has(i);
+    th += `<th class="pnl-yr${exp?' open':''}" onclick="togglePnlYear(${i})">${LBLS[i]}&nbsp;${exp?'▾':'▸'}</th>`;
+    if (exp) MNM.forEach(m => { th += `<th class="pnl-mo">${m}</th>`; });
+  });
+
+  // Row builder
+  function row(label, annArr, mFn, fmtFn, colorFn, sep=false, plus=false) {
+    let r = `<tr${sep?' class="pnl-sep"':''}><td class="pnl-lbl">${label}</td>`;
+    YRS.forEach((yr,i) => {
+      const exp = _pnlExp.has(i);
+      const v   = annArr[i];
+      const col = colorFn&&v!=null ? ` style="color:${colorFn(v)}"` : '';
+      r += `<td class="pnl-yc"${col}>${fmtFn(v,plus)}</td>`;
+      if (exp) {
+        const arr = mFn ? mFn(yr,i) : null;
+        if (!arr) { MNM.forEach(()=>{ r+='<td class="pnl-mc">—</td>'; }); }
+        else arr.forEach(mv => {
+          const mc = colorFn&&mv!=null ? ` style="color:${colorFn(mv)}"` : '';
+          r += `<td class="pnl-mc"${mc}>${fmtFn(mv,plus)}</td>`;
+        });
+      }
+    });
+    return r + '</tr>';
+  }
+
+  const tbody = [
+    row('Revenue',     annRev,    mRev,    fmt$,    null,        false, false),
+    row('COGS',        annCogs,   mCogs,   fmt$,    null,        false, false),
+    row('Gross Profit',annGp,     mGp,     fmt$,    colorGp,     true,  false),
+    row('GM%',         annGm,     mGm,     fmtPct,  null,        false, false),
+    row('SGA',         annSga,    mSga,    fmt$,    null,        true,  false),
+    row('Net Profit',  annProfit, mProfit, fmt$,    colorProfit, true,  true),
+  ].join('');
+
+  return `<p class="slabel" style="margin-bottom:.5rem">PNL consolidado — click en año para apertura mensual</p>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)">
+      <table class="pnl-tbl"><thead><tr>${th}</tr></thead><tbody>${tbody}</tbody></table>
+    </div>`;
+}
+
+function togglePnlYear(i) {
+  if (_pnlExp.has(i)) _pnlExp.delete(i); else _pnlExp.add(i);
+  document.getElementById('pnlSummaryTable').innerHTML = renderPnlTable();
+}
+
+function buildPnlSummaryTable() {
+  const el = document.getElementById('pnlSummaryTable');
+  if (el) el.innerHTML = renderPnlTable();
+}
+
+// ── TAB 1 ─────────────────────────────────────────────────────────────────────
+function buildTab1() {
+  loadForecast();
+  // Year cards
+  const c = document.getElementById('yearCards');
+  c.innerHTML = D.years.map((yr,i) => {
+    const p = D.profit[i], cur = D.revenue[i], prev = D.revenue[i-1];
+    const cls = i===5 ? 'part' : p>=0 ? 'win' : 'loss';
+    const gmPct = GM_FIXED[i] ?? '—';
+    const yoy = (i > 0 && i < 5 && cur > 0 && prev > 0)
+      ? ((cur - prev) / prev * 100).toFixed(0) : null;
+    return `<div class="ycard ${cls} yr-btn" id="ycard-${i}" onclick="showYearDetail(${i})">
+      <div class="yc-yr">${yr}${i===5?'<span class="bp">Parcial</span>':''}<span class="yr-chevron">▸</span></div>
+      <div class="yc-rev">${formatUSD(cur)}</div>
+      <div class="yc-gm">GM ${gmPct}%</div>
+      <div class="yc-profit ${p>=0?'p':'n'}">${p>=0?'+':''}${formatUSD(p)}</div>
+      ${yoy ? `<div class="yc-yoy">Rev ${yoy>0?'↑':'↓'} ${Math.abs(yoy)}% YoY</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Stacked bar
+  const ctx1 = document.getElementById('chartStack').getContext('2d');
+  CH.stack = new Chart(ctx1, {
+    type:'bar',
+    data:{ labels:D.years, datasets:[
+      { label:'Revenue', data:D.revenue, stack:'r', backgroundColor:'rgba(108,99,255,.82)', borderRadius:3 },
+      { label:'COGS',   data:D.cogs.map(v=>v!=null?Math.abs(v):null),   stack:'c', backgroundColor:'rgba(255,107,107,.78)', borderRadius:0 },
+      { label:'Salary', data:D.salary.map(v=>v!=null?Math.abs(v):null), stack:'c', backgroundColor:'rgba(255,159,67,.82)', borderRadius:0 },
+      { label:'Travel', data:D.travel.map(v=>v!=null?Math.abs(v):null), stack:'c', backgroundColor:'rgba(255,217,61,.72)', borderRadius:0 },
+      { label:'OPEX',   data:D.opex.map(v=>v!=null?Math.abs(v):null),   stack:'c', backgroundColor:'rgba(84,160,255,.72)', borderRadius:3 },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{ boxWidth:10, padding:11, font:{size:10} } },
+        tooltip:{ callbacks:{ label:c=>' '+c.dataset.label+': '+fmtUk(c.raw) } } },
+      scales:{
+        x:{ stacked:true, grid:{ color:'rgba(255,255,255,.04)' } },
+        y:{ stacked:true, min:0, grid:{ color:'rgba(255,255,255,.06)' }, ticks:{ callback:v=>fmtUk(v) } }
+      }
+    }
+  });
+
+  // Profit line
+  const ctx2 = document.getElementById('chartProfit').getContext('2d');
+  const g = ctx2.createLinearGradient(0,0,0,280);
+  g.addColorStop(0,'rgba(0,200,150,.28)'); g.addColorStop(.55,'rgba(0,200,150,.04)'); g.addColorStop(1,'rgba(255,107,107,.08)');
+  CH.profit = new Chart(ctx2, {
+    type:'line',
+    data:{ labels:D.years, datasets:[{ label:'Net Profit', data:D.profit,
+      borderColor:'#00c896', borderWidth:2.5, backgroundColor:g, fill:true, tension:0.32,
+      pointBackgroundColor:D.profit.map(v=>v>=0?'#00c896':'#ff6b6b'),
+      pointRadius:5, pointHoverRadius:7 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>' Net Profit: '+fmtUk(c.raw) } } },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,.04)'} },
+        y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{ callback:v=>fmtUk(v) } }
+      }
+    }
+  });
+
+  // PNL summary table
+  buildPnlSummaryTable();
+
+  // Auto-expand 2026 por defecto
+  showYearDetail(5);
+}
+
+// ── TAB 2 ─────────────────────────────────────────────────────────────────────
+function buildTab2() {
+  const mixYears = Object.keys(DATA.mixARS).map(String);
+
+  // GRÁFICO 1: MIX ARS vs USD (barras apiladas al 100%)
+  CH.chartMix = new Chart(document.getElementById('chartMix'), {
+    type: 'bar',
+    data: {
+      labels: mixYears,
+      datasets: [
+        { label:'🇦🇷 ARS (equiv. USD)', data:mixYears.map(y=>DATA.mixARS[Number(y)]), backgroundColor:'#6BAAFF', borderRadius:4 },
+        { label:'🇺🇸 USD puro',         data:mixYears.map(y=>DATA.mixUSD[Number(y)]), backgroundColor:'#FF6B35', borderRadius:4 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend: { labels:{ color:'#e8eaf0', font:{size:11} } },
+        tooltip: { callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.raw}%` } }
+      },
+      scales: {
+        x:{ stacked:true, ticks:{color:'#7b8099'}, grid:{color:'rgba(255,255,255,0.05)'} },
+        y:{ stacked:true, max:100, ticks:{color:'#7b8099', callback:v=>v+'%'}, grid:{color:'rgba(255,255,255,0.05)'} }
+      }
+    }
+  });
+
+  // GRÁFICO 2: TIPO DE CAMBIO IMPLÍCITO
+  const tcYears = Object.keys(DATA.tcImplicito);
+  CH.chartTC = new Chart(document.getElementById('chartTC'), {
+    type: 'line',
+    data: {
+      labels: tcYears,
+      datasets: [{
+        label:'TC implícito (ARS/USD)',
+        data:tcYears.map(y=>DATA.tcImplicito[Number(y)]),
+        borderColor:'#6C3BFF', backgroundColor:'rgba(108,59,255,0.1)',
+        pointBackgroundColor:'#6C3BFF', pointRadius:6, fill:true, tension:0.3
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{ labels:{color:'#e8eaf0', font:{size:11}} },
+        tooltip:{ callbacks:{ label:ctx=>` ARS $${ctx.raw.toLocaleString()} / USD` } }
+      },
+      scales: {
+        x:{ ticks:{color:'#7b8099'}, grid:{color:'rgba(255,255,255,0.05)'} },
+        y:{ ticks:{color:'#7b8099', callback:v=>'ARS $'+v.toLocaleString()}, grid:{color:'rgba(255,255,255,0.05)'} }
+      }
+    }
+  });
+
+  // GRÁFICO 3: CRECIMIENTO REAL VS INFLACIÓN
+  const crecYears = Object.keys(DATA.crecReal);
+  CH.chartInflacion = new Chart(document.getElementById('chartInflacion'), {
+    type: 'bar',
+    data: {
+      labels: crecYears.map(y=>y+' vs '+(Number(y)-1)),
+      datasets: [
+        { label:'Inflación Argentina',       data:crecYears.map(y=>DATA.inflacion[Number(y)]),  backgroundColor:'rgba(180,180,180,0.55)', borderRadius:4 },
+        { label:'Crecimiento real Ramped ARS', data:crecYears.map(y=>DATA.crecReal[Number(y)]), backgroundColor:'rgba(255,159,67,0.82)',  borderRadius:4 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{ labels:{color:'#e8eaf0', font:{size:11}} },
+        tooltip:{ callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.raw}%` } }
+      },
+      scales: {
+        x:{ ticks:{color:'#7b8099'}, grid:{color:'rgba(255,255,255,0.05)'} },
+        y:{ ticks:{color:'#7b8099', callback:v=>v+'%'}, grid:{color:'rgba(255,255,255,0.05)'} }
+      }
+    }
+  });
+}
+
+// ── TAB 3 ─────────────────────────────────────────────────────────────────────
+function buildTab3() {
+  // Table
+  document.getElementById('clientTbody').innerHTML = D.clients.map((c,i) => {
+    const bw = Math.round(c.pct/33*80);
+    return `<tr>
+      <td><strong style="color:var(--muted)">${i+1}</strong></td>
+      <td><strong>${c.name}</strong></td>
+      <td class="num">${fmtU(c.rev)}</td>
+      <td class="num" style="color:var(--muted)">${fmtU(c.cost)}</td>
+      <td class="num" style="color:var(--secondary)">${fmtU(c.gp)}</td>
+      <td class="num"><span class="mbadge ${mgClass(c.mg)}">${c.mg}%</span></td>
+      <td class="num"><div class="pbar-wrap"><div class="pbar" style="width:${bw}px"></div><span>${c.pct}%</span></div></td>
+    </tr>`;
+  }).join('');
+
+  // Margin bar (horizontal)
+  const sorted = [...D.clients].sort((a,b)=>b.mg-a.mg);
+  CH.margin = new Chart(document.getElementById('chartMargin').getContext('2d'), {
+    type:'bar',
+    data:{ labels:sorted.map(c=>c.name), datasets:[{
+      label:'Gross Margin %',
+      data:sorted.map(c=>c.mg),
+      backgroundColor:sorted.map(c=>c.mg>45?'rgba(0,200,150,.75)':c.mg>=25?'rgba(255,217,61,.7)':'rgba(255,107,107,.75)'),
+      borderRadius:5
+    }]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>' '+c.raw+'%' } } },
+      scales:{
+        x:{ min:0, max:80, grid:{color:'rgba(255,255,255,.06)'}, ticks:{callback:v=>v+'%'} },
+        y:{ grid:{display:false} }
+      }
+    }
+  });
+
+  // Doughnut
+  const rest = 100 - D.clients.reduce((s,c)=>s+c.pct,0);
+  const pal = ['#6c63ff','#00d4aa','#ff9f43','#54a0ff','#ff6b6b','#ffd93d','#c084fc','#34d399','#f472b6','#94a3b8'];
+  CH.pie = new Chart(document.getElementById('chartPie').getContext('2d'), {
+    type:'doughnut',
+    data:{ labels:[...D.clients.map(c=>c.name),'Otros'],
+      datasets:[{ data:[...D.clients.map(c=>c.pct), Math.max(rest,0)],
+        backgroundColor:pal, borderColor:'#161921', borderWidth:3, hoverOffset:8 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'58%',
+      plugins:{
+        legend:{ position:'bottom', labels:{boxWidth:9,padding:8,font:{size:9}} },
+        tooltip:{ callbacks:{ label:c=>` ${c.label}: ${c.raw}%` } }
+      }
+    }
+  });
+
+  // ── Card: Altas último mes
+  const ulm = ultimoMesCerrado();
+  const mesNom = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][ulm];
+  const nuevos = Object.entries(DATA.primeraFacturacion).filter(([,v])=>v.año===2026&&v.mes===ulm);
+  const revTotMes = DATA.rev2026[ulm]||0;
+  let altasHTML;
+  if (nuevos.length>0) {
+    const filas = nuevos.map(([nombre])=>{
+      const rev=(DATA.revClienteMes[nombre]||{})[ulm]||0;
+      const pct=revTotMes?(rev/revTotMes*100).toFixed(1):'—';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.55rem 0;border-bottom:1px solid rgba(0,200,150,.12);font-size:.82rem">
+        <span><span style="background:rgba(0,200,150,.15);color:var(--green);border-radius:4px;padding:1px 6px;font-size:.62rem;font-weight:700;margin-right:.4rem">🆕 NUEVO</span>${nombre}</span>
+        <span style="font-weight:700">${fmtU(rev)} <span style="color:var(--muted);font-weight:400">(${pct}% del mes)</span></span>
+      </div>`;
+    }).join('');
+    altasHTML=`<div style="background:rgba(0,200,150,.06);border:1px solid rgba(0,200,150,.22);border-radius:var(--radius);padding:1.1rem 1.3rem;margin-top:1.2rem">
+      <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:.6rem">🆕 Altas — ${mesNom}</div>
+      ${filas}
+    </div>`;
+  } else {
+    altasHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.3rem;margin-top:1.2rem;color:var(--muted);font-size:.83rem">Sin altas nuevas en ${mesNom}</div>`;
+  }
+  document.getElementById('altasMes').innerHTML=altasHTML;
+
+  // ── KPI retención
+  const activos26=Object.keys(DATA.revClienteMes).length;
+  document.getElementById('retencionKpis').innerHTML=`
+    <div class="ycard win"><div class="yc-yr">Retención 2024→2025</div><div class="yc-rev">45%</div><div class="yc-gm">3 de 8 retenidos</div></div>
+    <div class="ycard win"><div class="yc-yr">Clientes nuevos 2025</div><div class="yc-rev">14</div><div class="yc-gm">incorporados en el año</div></div>
+    <div class="ycard part"><div class="yc-yr">Activos 2026</div><div class="yc-rev">${activos26}</div><div class="yc-gm">con datos reportados</div></div>`;
+
+  // ── Chart retención
+  const retAnios=Object.keys(DATA.retencion);
+  CH.chartRetencion=new Chart(document.getElementById('chartRetencion').getContext('2d'),{
+    type:'bar',
+    data:{ labels:retAnios, datasets:[
+      { label:'Nuevos',    data:retAnios.map(y=>DATA.retencion[y].nuevos),   backgroundColor:'rgba(0,200,150,.8)',  borderRadius:4 },
+      { label:'Retenidos', data:retAnios.map(y=>DATA.retencion[y].retenidos),backgroundColor:'rgba(84,160,255,.8)', borderRadius:4 },
+      { label:'Perdidos',  data:retAnios.map(y=>DATA.retencion[y].perdidos), backgroundColor:'rgba(255,107,107,.8)',borderRadius:4 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'top',labels:{color:'#e8eaf0',font:{size:10},boxWidth:10}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.raw}`}} },
+      scales:{
+        x:{ticks:{color:'#7b8099'},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{ticks:{color:'#7b8099'},grid:{color:'rgba(255,255,255,0.06)'}}
+      }
+    }
+  });
+
+  // ── Tabla clientes activos 2026
+  const totalRev26=Object.values(DATA.rev2026).reduce((s,v)=>s+v,0);
+  const clientes26=Object.entries(DATA.revClienteMes).map(([nombre,meses])=>{
+    const revTotal=Object.values(meses).reduce((s,v)=>s+v,0);
+    const mesesAct=Object.keys(meses).length;
+    const info=DATA.primeraFacturacion[nombre];
+    const esNuevo=info&&info.año===2026;
+    const mAbbr=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const desde=info?`${mAbbr[info.mes]} ${info.año}`:'—';
+    const pct=totalRev26?(revTotal/totalRev26*100).toFixed(1):'—';
+    return {nombre,esNuevo,desde,revTotal,mesesAct,pct};
+  }).sort((a,b)=>b.revTotal-a.revTotal);
+  document.getElementById('tabla2026clientes').innerHTML=`<table class="dtable">
+    <thead><tr>
+      <th>Cliente</th><th style="text-align:center">Estado</th><th>Desde</th>
+      <th class="num">Rev 2026</th><th class="num">Meses</th><th class="num">% total</th>
+    </tr></thead>
+    <tbody>${clientes26.map(c=>`<tr>
+      <td><strong>${c.nombre}</strong></td>
+      <td style="text-align:center">${c.esNuevo
+        ?'<span style="background:rgba(0,200,150,.12);color:var(--green);border-radius:4px;padding:2px 7px;font-size:.66rem;font-weight:700">🆕 Nuevo 2026</span>'
+        :'<span style="background:rgba(84,160,255,.12);color:#54a0ff;border-radius:4px;padding:2px 7px;font-size:.66rem;font-weight:700">🔄 Recurrente</span>'}</td>
+      <td style="color:var(--muted);font-size:.8rem">${c.desde}</td>
+      <td class="num"><strong>${fmtU(c.revTotal)}</strong></td>
+      <td class="num" style="color:var(--muted)">${c.mesesAct}</td>
+      <td class="num"><strong>${c.pct}%</strong></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// ── TAB 4 — SG&A ──────────────────────────────────────────────────────────────
+function buildTab4() {
+  // Donut: composición SGA 2026
+  const sgaLabels=['Salarios + Aguinaldo','Fees','Travel','Impuestos ARG','Operativos','Bank Fees'];
+  const sgaValues=[433000,108500,158100,56500,27100,10964]; // 30% del objetivo anual $2,647,212
+  const sgaTotal=sgaValues.reduce((s,v)=>s+v,0);
+  const sgaColors=['#6c63ff','#00d4aa','#ff9f43','#ff6b6b','#54a0ff','#ffd93d'];
+  CH.sgaDona=new Chart(document.getElementById('chartSgaDona').getContext('2d'),{
+    type:'doughnut',
+    data:{ labels:sgaLabels, datasets:[{data:sgaValues,backgroundColor:sgaColors,borderColor:'#161921',borderWidth:3,hoverOffset:8}] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'56%',
+      plugins:{
+        legend:{position:'right',labels:{color:'#e8eaf0',font:{size:10},boxWidth:10,padding:8}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmtU(ctx.raw)} (${(ctx.raw/sgaTotal*100).toFixed(1)}%)`}}
+      }
+    }
+  });
+
+  // ── Presupuesto mensual SGA 2026
+  // Salarios: ARS $18.5MM/mes ÷1395 ≈ $13,261 USD + 2 directores $24K + 2 vendedores $6K, +2.5%/mes sobre ARS
+  // Viajes: Mar $12.5K (MX $5K+extra), Abr/Sep/Nov $14.5K (Europa $7K+extra)
+  // Eventos: $1,500/mes ($18K anual)
+  // OPEX/Fees: $6,083/mes | Impuestos ARG: $2,083/mes
+  // Total anual: $714,930 (27.0% del revenue objetivo)
+  const sgaBudget = [52927,53259,66098,68446,54303,54669,55044,55428,70322,56226,71140,57064];
+
+  // Real data por mes (solo meses con datos)
+  const sgaReal={1:39800,2:41700,3:10000};
+  const parcialMes={3:true};
+  const MNOM=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  const COLS='100px 1fr 1fr 80px 28px';
+  const semHeaderHTML=`<div style="display:grid;grid-template-columns:${COLS};gap:.4rem;padding:.3rem .1rem;font-size:.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;border-bottom:1px solid var(--border)">
+    <span>Mes</span><span style="text-align:right">Presupuesto</span><span style="text-align:right">Real</span><span style="text-align:right">Varianza</span><span></span>
+  </div>`;
+
+  const semFilas=sgaBudget.map((budget,i)=>{
+    const mes=i+1;
+    const nombre=MNOM[i];
+    const real=sgaReal[mes]??null;
+    const esParcial=parcialMes[mes]??false;
+    const tieneReal=real!==null;
+
+    let varHtml='<span style="text-align:right;color:var(--muted)">—</span>';
+    let emoji='<span style="color:var(--muted);font-size:.75rem;text-align:center">·</span>';
+
+    if(tieneReal && !esParcial){
+      const dif=real-budget;
+      const pctDif=(dif/budget*100).toFixed(1);
+      const bajo=dif<=0;
+      const varColor=bajo?'var(--green)':Math.abs(dif/budget)<=0.1?'var(--yellow)':'var(--red)';
+      varHtml=`<span style="text-align:right;color:${varColor};font-weight:700">${bajo?'':'+'}${fmtUk(dif)}</span>`;
+      emoji=bajo?'🟢':Math.abs(dif/budget)<=0.1?'🟡':'🔴';
+      emoji=`<span style="font-size:.9rem;text-align:center">${emoji}</span>`;
+    } else if(esParcial){
+      varHtml=`<span style="text-align:right;color:var(--muted);font-size:.7rem">parcial</span>`;
+      emoji=`<span style="font-size:.9rem;text-align:center">⚪</span>`;
+    }
+
+    const realHtml=tieneReal
+      ?`<span style="text-align:right;font-weight:600;color:${esParcial?'var(--muted)':'var(--text)'}">${fmtUk(real)}${esParcial?'<sup style="font-size:.55rem"> *</sup>':''}</span>`
+      :`<span style="text-align:right;color:var(--muted)">—</span>`;
+
+    const isFuture=!tieneReal;
+    return `<div style="display:grid;grid-template-columns:${COLS};align-items:center;gap:.4rem;padding:.55rem .1rem;border-bottom:1px solid rgba(42,47,61,.5);font-size:.79rem;${isFuture?'opacity:.55':''}">
+      <span style="font-weight:600">${nombre}</span>
+      <span style="text-align:right;color:var(--muted)">${fmtUk(budget)}</span>
+      ${realHtml}
+      ${varHtml}
+      ${emoji}
+    </div>`;
+  }).join('');
+
+  // Fila acumulado
+  const mesesConReal=Object.keys(sgaReal).map(Number).filter(m=>!parcialMes[m]);
+  const acumBudget=mesesConReal.reduce((s,m)=>s+sgaBudget[m-1],0);
+  const acumReal=mesesConReal.reduce((s,m)=>s+sgaReal[m],0);
+  const acumDif=acumReal-acumBudget;
+  const acumBajo=acumDif<=0;
+  const acumColor=acumBajo?'var(--green)':Math.abs(acumDif/acumBudget)<=0.1?'var(--yellow)':'var(--red)';
+  const acumEmoji=acumBajo?'🟢':Math.abs(acumDif/acumBudget)<=0.1?'🟡':'🔴';
+  const semAcum=`<div style="display:grid;grid-template-columns:${COLS};align-items:center;gap:.4rem;padding:.7rem .1rem;background:rgba(108,99,255,.07);border-top:2px solid var(--border);font-size:.79rem">
+    <span style="font-weight:700;color:var(--text)">Acumulado</span>
+    <span style="text-align:right;font-weight:700">${fmtUk(acumBudget)}</span>
+    <span style="text-align:right;font-weight:700">${fmtUk(acumReal)}</span>
+    <span style="text-align:right;color:${acumColor};font-weight:800">${acumBajo?'':'+'}${fmtUk(acumDif)}</span>
+    <span style="font-size:.9rem;text-align:center">${acumEmoji}</span>
+  </div>`;
+
+  document.getElementById('sgaSemaforo').innerHTML=`<div style="margin-top:.4rem">${semHeaderHTML}${semFilas}${semAcum}</div>`;
+
+  // Línea doble: evolución SGA vs Revenue
+  const evoLabels=['2023','2024','2025','2026 proy.'];
+  const evoRev=[399054,1042570,1764808,2647212];
+  const evoSGA=[163647,294769,536738,714930];
+  const evoSGAPct=evoRev.map((r,i)=>+(evoSGA[i]/r*100).toFixed(1));
+  CH.sgaEvo=new Chart(document.getElementById('chartSgaEvo').getContext('2d'),{
+    type:'bar',
+    data:{ labels:evoLabels, datasets:[
+      {label:'Revenue',  data:evoRev, backgroundColor:'rgba(108,99,255,.4)', borderRadius:4, yAxisID:'y'},
+      {label:'SGA',      data:evoSGA, backgroundColor:'rgba(255,107,107,.7)',borderRadius:4, yAxisID:'y'},
+      {label:'SGA%',     data:evoSGAPct, type:'line', borderColor:'#ffd93d', borderWidth:2.5,
+       pointBackgroundColor:'#ffd93d', pointRadius:5, fill:false, tension:0.3, yAxisID:'y2'}
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'top',labels:{color:'#e8eaf0',font:{size:10},boxWidth:10}},
+        tooltip:{callbacks:{label:ctx=>ctx.datasetIndex===2?` SGA%: ${ctx.raw}%`:` ${ctx.dataset.label}: ${fmtU(ctx.raw)}`}}
+      },
+      scales:{
+        x:{ticks:{color:'#7b8099'},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{ticks:{color:'#7b8099',callback:v=>fmtUk(v)},grid:{color:'rgba(255,255,255,0.06)'}},
+        y2:{position:'right',min:0,max:50,ticks:{color:'#ffd93d',callback:v=>v+'%'},grid:{display:false}}
+      }
+    }
+  });
+}
+
+// ── TAB 4 (old seasonality — replaced) ────────────────────────────────────────
+function buildTab4_OLD() {
+  // Revenue multi-line
+  CH.sRev = new Chart(document.getElementById('chartSRev').getContext('2d'), {
+    type:'line',
+    data:{ labels:D.months, datasets:[
+      { label:'2024', data:D.rev24, borderColor:'rgba(108,99,255,.75)', borderWidth:2,
+        fill:false, tension:0.3, pointRadius:2, borderDash:[5,3] },
+      { label:'2025', data:D.rev25, borderColor:'#00d4aa', borderWidth:2.5,
+        fill:false, tension:0.3, pointRadius:3 },
+      { label:'2026', data:D.rev26, borderColor:'#ff9f43', borderWidth:2.5,
+        fill:false, tension:0.3, pointRadius:4, spanGaps:false },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{boxWidth:10,padding:11,font:{size:10}} },
+        tooltip:{ callbacks:{ label:c=>` ${c.dataset.label}: ${fmtUk(c.raw)}` } } },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,.04)'} },
+        y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{callback:v=>fmtUk(v)} }
+      }
+    }
+  });
+
+  // Profit multi-line
+  CH.sProfit = new Chart(document.getElementById('chartSProfit').getContext('2d'), {
+    type:'line',
+    data:{ labels:D.months, datasets:[
+      { label:'Profit 2024', data:D.profit24, borderColor:'rgba(108,99,255,.7)', borderWidth:2,
+        fill:false, tension:0.3, pointRadius:3, borderDash:[5,3],
+        pointBackgroundColor:D.profit24.map(v=>v>=0?'#00c896':'#ff6b6b') },
+      { label:'Profit 2025', data:D.profit25, borderColor:'#00c896', borderWidth:2.5,
+        fill:false, tension:0.3, pointRadius:3,
+        pointBackgroundColor:D.profit25.map(v=>v>=0?'#00c896':'#ff6b6b') },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{boxWidth:10,padding:11,font:{size:10}} },
+        tooltip:{ callbacks:{ label:c=>` ${c.dataset.label}: ${fmtUk(c.raw)}` } } },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,.04)'} },
+        y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{callback:v=>fmtUk(v)} }
+      }
+    }
+  });
+
+  // Heatmap
+  const all = [...D.rev24, ...D.rev25, ...D.rev26.filter(v=>v!==null)];
+  const mx = Math.max(...all);
+  const rows = [{yr:'2024',data:D.rev24},{yr:'2025',data:D.rev25},{yr:'2026',data:D.rev26}];
+  let h = D.months.map(m=>`<div class="hm-hdr">${m}</div>`).join('');
+  h = `<div class="hm-lbl"></div>${h}`;
+  rows.forEach(r => {
+    h += `<div class="hm-lbl">${r.yr}</div>`;
+    r.data.forEach(v => {
+      if (!v) { h += `<div class="hmc hm-empty">—</div>`; return; }
+      const ratio = v/mx;
+      const alpha = (0.15 + ratio*0.78).toFixed(2);
+      const tc = ratio>0.3 ? 'rgba(232,234,240,.92)' : 'rgba(123,128,153,.8)';
+      h += `<div class="hmc" style="background:rgba(108,99,255,${alpha});color:${tc}" title="${r.yr}: $${v.toLocaleString()}">${fmtUk(v)}</div>`;
+    });
+  });
+  document.getElementById('hmWrap').innerHTML = `<div class="hm">${h}</div>`;
+}
+
+// ── TAB 5 ─────────────────────────────────────────────────────────────────────
+function buildTab5() {
+  const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  // Objectives chart: Target Orig vs Adjusted vs Real
+  CH.obj = new Chart(document.getElementById('chartObj').getContext('2d'), {
+    type:'bar',
+    data:{ labels:D.months, datasets:[
+      { label:'Target Original', data:D.targets26, backgroundColor:'rgba(123,128,153,.25)',
+        borderColor:'rgba(123,128,153,.5)', borderWidth:1.5, borderRadius:3, type:'bar' },
+      { label:'Target Ajustado', data:D.adjusted26, backgroundColor:'rgba(255,217,61,.18)',
+        borderColor:'rgba(255,217,61,.7)', borderWidth:1.5, borderRadius:3, type:'bar' },
+      { label:'Real', data:D.real26, borderColor:'var(--primary)', borderWidth:2.5,
+        backgroundColor:'rgba(108,99,255,.12)', pointBackgroundColor:'var(--primary)',
+        pointRadius:5, spanGaps:false, type:'line', fill:true, tension:0.2 },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{boxWidth:10,padding:11,font:{size:10}} },
+        tooltip:{ callbacks:{ label:c=>` ${c.dataset.label}: ${fmtU(c.raw)}` } } },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,.04)'} },
+        y:{ grid:{color:'rgba(255,255,255,.06)'}, ticks:{callback:v=>fmtUk(v)} }
+      }
+    }
+  });
+
+  // Table
+  document.getElementById('objTbody').innerHTML = MESES.map((mes,i) => {
+    const real = D.real26[i], tOrig = D.targets26[i], tAdj = D.adjusted26[i];
+    const hasDato = real !== null;
+    const pct = hasDato ? Math.round(real/tAdj*100) : null;
+    const isAdj = tAdj !== tOrig;
+    const adjCell = isAdj
+      ? `<span class="adj-val">${fmtU(tAdj)}</span>`
+      : `<span style="color:var(--muted)">${fmtU(tAdj)}</span>`;
+    const realCell = hasDato ? `<strong style="color:${pcolor(pct)}">${fmtU(real)}</strong>` : `<span class="pend">—</span>`;
+    const pctCell = hasDato ? `<strong style="color:${pcolor(pct)}">${pct}%</strong>` : `<span class="pend">—</span>`;
+    const barCell = hasDato
+      ? `<div class="tprog-track" style="width:70px"><div class="tprog-fill" style="width:${Math.min(pct,100)}%;background:${pcolor(pct)}"></div></div>`
+      : `<div class="tprog-track" style="width:70px"></div>`;
+    const icon = !hasDato ? '' : pct>=100 ? '✅' : pct>=80 ? '⚠️' : '🔴';
+    return `<tr>
+      <td><strong>${mes}</strong></td>
+      <td class="num" style="color:var(--muted)">${fmtU(tOrig)}</td>
+      <td class="num">${adjCell}</td>
+      <td class="num">${realCell}</td>
+      <td class="num">${pctCell}</td>
+      <td>${barCell}</td>
+      <td style="text-align:center;font-size:1rem">${icon}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+loadSheetData();
+</script>
+</body>
+</html>
