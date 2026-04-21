@@ -1347,11 +1347,11 @@ function showYearDetail(i) {
 
     const filas = [
       mRow('Revenue',      c => fmtUk(c.rev),  null),
-      mRow('COGS',         c => fmtUk(c.cogs), () => 'var(--muted)'),
+      mRow('COGS',         c => fmtUk(c.cogs), () => 'var(--red)'),
       mRow('Gross Margin', c => fmtUk(c.gm),   gc,  'border-top:1px solid rgba(255,255,255,.08)'),
       mRow('GM%',          c => pct(c.gmPct),   gc),
-      mRow('SGA',          c => fmtUk(c.sga),  () => 'var(--muted)', 'border-top:1px solid rgba(255,255,255,.08)'),
-      mRow('SGA%',         c => pct(c.sgaPct), () => 'var(--muted)'),
+      mRow('SGA',          c => fmtUk(c.sga),  () => 'var(--red)', 'border-top:1px solid rgba(255,255,255,.08)'),
+      mRow('SGA%',         c => pct(c.sgaPct), () => 'var(--red)'),
       mRow('Net Profit',   c => (c.np>=0?'+':'')+fmtUk(c.np), nc, 'border-top:1px solid rgba(255,255,255,.08)'),
       mRow('NP%',          c => (c.np>=0?'+':'')+pct(c.npPct), nc),
     ].join('');
