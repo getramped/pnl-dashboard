@@ -1850,9 +1850,15 @@ function buildTab4() {
   // Total anual: $714,930 (27.0% del revenue objetivo)
   const sgaBudget = [52927,53259,66098,68446,54303,54669,55044,55428,70322,56226,71140,57064];
 
-  // Real data por mes (solo meses con datos)
-  const sgaReal={1:39800,2:41700,3:10000};
-  const parcialMes={3:true};
+  // Real data por mes — leer de DATA.monthlyByYear['2026'].sga si está disponible, sino DATA.sga2026
+  const sgaReal={};
+  const parcialMes={};
+  const sgaSrc = DATA.monthlyByYear?.['2026']?.sga;
+  if (sgaSrc) {
+    sgaSrc.forEach((v, i) => { if (v != null) sgaReal[i+1] = Math.abs(v); });
+  } else {
+    Object.entries(DATA.sga2026).forEach(([m, v]) => { sgaReal[Number(m)] = Math.abs(v); });
+  }
   const MNOM=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   const COLS='100px 1fr 1fr 80px 28px';
