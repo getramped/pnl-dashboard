@@ -300,7 +300,7 @@ footer{text-align:center;color:var(--muted);font-size:.7rem;padding:1.8rem 1rem 
   <div class="logo">Ramped <span style="opacity:.55">2.0</span></div>
   <div class="header-badges">
     <span class="hbadge hb-exec">Executive PNL</span>
-    <span class="hbadge hb-date">📅 Datos al Mar 2026</span>
+    <span class="hbadge hb-date">📅 Datos al Abr 2026</span>
   </div>
 </header>
 
@@ -381,8 +381,8 @@ footer{text-align:center;color:var(--muted);font-size:.7rem;padding:1.8rem 1rem 
         </div>
         <div class="biz-row">
           <span>2026<span class="bp">parcial</span></span>
-          <span class="biz-rev">ARS$132M</span>
-          <span class="biz-rev">ARS$41.6M</span>
+          <span class="biz-rev">ARS$400M</span>
+          <span class="biz-rev">ARS$126M</span>
           <span class="biz-gm" style="color:var(--green)">31.5%</span>
           <span class="biz-pft n">-ARS$11.8M</span>
         </div>
@@ -427,9 +427,9 @@ footer{text-align:center;color:var(--muted);font-size:.7rem;padding:1.8rem 1rem 
         </div>
         <div class="biz-row">
           <span>2026<span class="bp">parcial</span></span>
-          <span class="biz-rev">$172K</span>
-          <span class="biz-rev">$64.1K</span>
-          <span class="biz-gm" style="color:var(--green)">37.2%</span>
+          <span class="biz-rev">$298K</span>
+          <span class="biz-rev">$110K</span>
+          <span class="biz-gm" style="color:var(--green)">36.9%</span>
           <span class="biz-pft p">+$16.9K</span>
         </div>
       </div>
@@ -1046,30 +1046,36 @@ function useFallback() {
 
 // ── DATA 2026 ─────────────────────────────────────────────────────────────────
 const DATA = {
-  rev2026:  { 1: 134576, 2: 132360, 3: 141801 },
-  cogs2026: { 1: -87437, 2: -85528, 3: -93423 },
-  sga2026:  { 1: -39856, 2: -42030, 3: -44390 },
+  rev2026:  { 1: 134576, 2: 132360, 3: 141801, 4: 241613 },
+  cogs2026: { 1: -87437, 2: -85528, 3: -93423, 4: -159223 },
+  sga2026:  { 1: -39856, 2: -42030, 3: -44390, 4: -46500 },
   rev2025:  { 1: 76625,  2: 96705,  3: 131466 },
   sga2025Total: 536738,
-  sga2025: { 1: 37940, 2: 41760, 3: 44295 }, // mensual real 2025 — completar con datos del ledger
+  sga2025: { 1: 37940, 2: 41760, 3: 44295, 4: 44728 }, // mensual real 2025; abril estimado (promedio anual)
   sga2025Cat: { salarios:332000, viajes:91600, honorarios:55000, operativos:39000, bancarios:19138 },
   sga2026Proj: { salarios:191751, fees:48000, viajes:70000, bancarios:5000, impuestos:25000, operativos:12000 },
-  mixARS: { 2023:85, 2024:50, 2025:49, 2026:65 },
-  mixUSD: { 2023:15, 2024:50, 2025:51, 2026:35 },
+  mixARS: { 2023:85, 2024:50, 2025:49, 2026:44 },
+  mixUSD: { 2023:15, 2024:50, 2025:51, 2026:56 },
   crecReal: { 2024:627, 2025:44.8 },
   inflacion: { 2024:118.7, 2025:31.5 },
-  tcImplicito: { 2023:655, 2024:1186, 2025:1354, 2026:1395 },
+  tcImplicito: { 2023:655, 2024:1186, 2025:1354, 2026:1405 },
   primeraFacturacion: {
     'Flo Health':                    { año:2024, mes:1 },
     'LearnWords':                    { año:2025, mes:3 },
     'Newry Global Media - WeWoo':    { año:2026, mes:1 },
-    'Stake':                         { año:2026, mes:3 },
+    'Betano':                        { año:2026, mes:1 },
+    'Bplay':                         { año:2026, mes:1 },
+    'Stake CL':                      { año:2026, mes:3 },
+    'FmMeds':                        { año:2026, mes:4 },
   },
   revClienteMes: {
-    'Flo Health':                 { 1:43600, 2:43125 },
+    'Flo Health':                 { 1:43600, 2:43125, 4:46250 },
     'LearnWords':                 { 2:6000 },
-    'Newry Global Media - WeWoo': { 1:53307, 2:26253 },
-    'Stake':                      { 3:11844 },
+    'Newry Global Media - WeWoo': { 1:53307, 2:26253, 4:56914 },
+    'Betano':                     { 4:44613 },
+    'Bplay':                      { 4:71487 },
+    'Stake CL':                   { 3:11844, 4:18750 },
+    'FmMeds':                     { 4:3600 },
   },
   retencion: {
     2024: { retenidos:3, nuevos:6,  perdidos:4 },
@@ -1088,28 +1094,28 @@ function ultimoMesCerrado() {
 const D = {
   years:   ['2021','2022','2023','2024','2025','2026*'],
   revenue: [49229, 158348, 399054, 1042570, 1790008, 408737],
-  cogs:    [33026, 115526, 307926, 732044, 1180160, 266388],
+  cogs:    [33026, 115526, 307926, 732044, 1180160, 425611],
   salary:  [null,  null,  null,  178628, 331702,  null],
   travel:  [null,  null,  null,  33987,  91526,   null],
-  opex:    [50542, 104724, 163647, 82154, 113510,  126276],
-  profit:  [-34339,-61902,-38518, 38064,  81864,  16073],
-  gm:      [32.9,  27.0,  22.8,  29.8,   34.1,   34.8],
+  opex:    [50542, 104724, 163647, 82154, 113510,  172776],
+  profit:  [-34339,-61902,-38518, 38064,  81864,  51963],
+  gm:      [32.9,  27.0,  22.8,  29.8,   34.1,   34.6],
 
   arsYears:  ['2023','2024','2025','2026*'],
-  arsRev:    [39202528, 622966827, 1186002118, 132038000],
+  arsRev:    [39202528, 622966827, 1186002118, 399590934],
   arsProfit: [-11221769, 51050258,  6146642,   -11762658],
 
-  usdRev:    [339250, 517561, 913968, 172285],
+  usdRev:    [339250, 517561, 913968, 297799],
   usdProfit: [-14051, -8504,  65712,  16893],
 
   months: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
   arsRev24m: [14690000,26661250,31484000,36425600,46601600,50544250,52818000,63968125,68160626,89330626,64113750,78169000],
   arsRev25m: [46736818,55112400,74578800,77777000,68473100,92807000,111689500,120459000,208346200,123076000,120124300,86822000],
-  arsRev26m: [52548800,79489200,102691467,null,null,null,null,null,null,null,null,null],
+  arsRev26m: [52548800,79489200,102691467,164861467,null,null,null,null,null,null,null,null],
 
   rev24:    [53550,99091,58478,72607,74380,65308,82401,77649,87319,124382,104197,143210],
   rev25:    [76625,121705,131466,122396,188825,220413,205856,189205,159978,155324,112871,105344],
-  rev26:    [134576,132360,141801,null,null,null,null,null,null,null,null,null],
+  rev26:    [134576,132360,141801,241613,null,null,null,null,null,null,null,null],
   profit24: [-5718,1056,7103,-3967,-17684,-3088,10473,-4129,5560,13663,29000,5796],
   profit25: [-5548,21872,15564,-1343,-1721,19916,11580,13928,289,11880,623,-5177],
 
@@ -1127,7 +1133,7 @@ const D = {
 
   targets26:  [114938,145058,197199,183594,283238,330620,308784,283808,239967,232686,169307,158016],
   adjusted26: [114938,145058,196505,182900,282544,329926,308090,283114,239273,231992,168613,157322],
-  real26:     [134576,132360,141801,null,null,null,null,null,null,null,null,null],
+  real26:     [134576,132360,141801,241613,null,null,null,null,null,null,null,null],
 };
 
 // ── FORMATTERS ────────────────────────────────────────────────────────────────
@@ -1169,7 +1175,7 @@ function formatUSD(n) {
   return sign + '$' + a.toLocaleString();
 }
 // GM% is fixed — never computed from sheet values
-const GM_FIXED = [32.9, 27.0, 22.8, 29.8, 34.1, 35.2];
+const GM_FIXED = [32.9, 27.0, 22.8, 29.8, 34.1, 34.6];
 function mgClass(m) { return m > 45 ? 'mg' : m >= 25 ? 'my' : 'mr'; }
 
 // ── Mantener D.revenue[5] en sync con D.rev26 ─────────────────────────────────
