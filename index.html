@@ -583,8 +583,8 @@ footer{text-align:center;color:var(--muted);font-size:.7rem;padding:1.8rem 1rem 
 <div id="tab4" class="panel" style="display:none">
   <p class="slabel">Estructura y eficiencia de los gastos operativos</p>
 
-  <!-- 4 KPI cards -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.2rem">
+  <!-- KPI cards — la 5ta se rellena dinámicamente con YoY acum real -->
+  <div id="sgaKpiGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem;margin-bottom:1.2rem">
     <div class="ycard win">
       <div class="yc-yr">SGA Total 2025</div>
       <div class="yc-rev">$536,738</div>
@@ -596,15 +596,16 @@ footer{text-align:center;color:var(--muted);font-size:.7rem;padding:1.8rem 1rem 
       <div class="yc-gm">27.0% del objetivo anual</div>
     </div>
     <div class="ycard win">
-      <div class="yc-yr">Variación vs 2025</div>
+      <div class="yc-yr">Variación anual vs 2025</div>
       <div class="yc-rev" style="color:var(--yellow)">+33.2%</div>
-      <div class="yc-gm">Aumento proyectado</div>
+      <div class="yc-gm">Proyectado full year</div>
     </div>
     <div class="ycard win">
       <div class="yc-yr">Target SGA%</div>
       <div class="yc-rev">≤25%</div>
       <div class="yc-gm">del revenue anual</div>
     </div>
+    <div id="sgaYoYCard" class="ycard win"></div>
   </div>
 
   <!-- Composición + Semáforo -->
@@ -1050,6 +1051,7 @@ const DATA = {
   sga2026:  { 1: -39856, 2: -42030, 3: -44390 },
   rev2025:  { 1: 76625,  2: 96705,  3: 131466 },
   sga2025Total: 536738,
+  sga2025: { 1: 37940, 2: 41760, 3: 44295 }, // mensual real 2025 — completar con datos del ledger
   sga2025Cat: { salarios:332000, viajes:91600, honorarios:55000, operativos:39000, bancarios:19138 },
   sga2026Proj: { salarios:191751, fees:48000, viajes:70000, bancarios:5000, impuestos:25000, operativos:12000 },
   mixARS: { 2023:85, 2024:50, 2025:49, 2026:65 },
@@ -1076,7 +1078,10 @@ const DATA = {
   },
 };
 function ultimoMesCerrado() {
-  return Math.max(...Object.keys(DATA.rev2026).map(Number));
+  // Usar D.rev26 (array 0-indexed) como source canónica — es lo que actualiza el chart también
+  let last = 0;
+  D.rev26.forEach((v, i) => { if (v !== null && v !== undefined) last = i + 1; });
+  return last || Math.max(...Object.keys(DATA.rev2026).map(Number));
 }
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
@@ -1166,6 +1171,10 @@ function formatUSD(n) {
 // GM% is fixed — never computed from sheet values
 const GM_FIXED = [32.9, 27.0, 22.8, 29.8, 34.1, 35.2];
 function mgClass(m) { return m > 45 ? 'mg' : m >= 25 ? 'my' : 'mr'; }
+
+// ── Mantener D.revenue[5] en sync con D.rev26 ─────────────────────────────────
+// Cuando se agrega un mes a D.rev26, el total anual se recalcula automáticamente.
+D.revenue[5] = D.rev26.reduce((s, v) => s + (v || 0), 0);
 function pcolor(p) { return p >= 80 ? 'var(--green)' : p >= 50 ? 'var(--yellow)' : 'var(--red)'; }
 
 // ── CHART DEFAULTS ────────────────────────────────────────────────────────────
@@ -1362,15 +1371,12 @@ function showYearDetail(i) {
     let comparativaHtml = '';
     if (i === 5) {
       const ultimo = ultimoMesCerrado();
-      const mesKeys26 = Object.keys(DATA.rev2026).map(Number).sort((a,b)=>a-b);
-      const rev26acc = mesKeys26.filter(m=>m<=ultimo).reduce((s,m)=>s+(DATA.rev2026[m]||0),0);
-      const rev25mby = DATA.monthlyByYear?.['2025']?.rev;
+      // Usar D.rev26 (mismo source que el chart) para que las cards siempre estén en sync
+      let rev26acc = 0;
+      for (let m=1; m<=ultimo; m++) rev26acc += D.rev26[m-1] || 0;
+      // Usar D.rev25 como fuente canónica (12 meses completos, mismo origen que el chart)
       let rev25acc = 0;
-      if (rev25mby) {
-        for (let m=1; m<=ultimo; m++) rev25acc += rev25mby[m-1] || 0;
-      } else {
-        mesKeys26.filter(m=>m<=ultimo&&DATA.rev2025[m]).forEach(m=>{ rev25acc += DATA.rev2025[m]; });
-      }
+      for (let m=1; m<=ultimo; m++) rev25acc += D.rev25[m-1] || 0;
       const varPct = rev25acc ? ((rev26acc-rev25acc)/rev25acc*100).toFixed(1) : null;
       const varColor = varPct>=0?'var(--green)':'var(--red)', varArrow = varPct>=0?'↑':'↓';
       const mesLabel = mesNombres[ultimo] || 'Mes '+ultimo;
@@ -1920,6 +1926,34 @@ function buildTab4() {
   </div>`;
 
   document.getElementById('sgaSemaforo').innerHTML=`<div style="margin-top:.4rem">${semHeaderHTML}${semFilas}${semAcum}</div>`;
+
+  // ── Card YoY SGA acumulado real ────────────────────────────────────────────
+  const mesesCerrados = mesesConReal; // meses con dato real no-parcial
+  if (mesesCerrados.length > 0) {
+    const acum26 = acumReal;
+    // Sumar mismo período 2025 desde DATA.sga2025 mensual (o pro-ratear si no hay)
+    let acum25 = 0;
+    const hasMensual25 = DATA.sga2025 && Object.keys(DATA.sga2025).length > 0;
+    if (hasMensual25) {
+      mesesCerrados.forEach(m => { acum25 += Math.abs(DATA.sga2025[m] || 0); });
+    } else {
+      acum25 = DATA.sga2025Total / 12 * mesesCerrados.length;
+    }
+    const yoyPct = acum25 ? ((acum26 - acum25) / acum25 * 100) : null;
+    const yoyColor = yoyPct === null ? 'var(--muted)' : yoyPct <= 0 ? 'var(--green)' : yoyPct <= 10 ? 'var(--yellow)' : 'var(--red)';
+    const yoyArrow = yoyPct === null ? '' : yoyPct <= 0 ? '↓' : '↑';
+    const periodoLabel = mesesCerrados.length === 1
+      ? MNOM[mesesCerrados[0]-1]
+      : `${MNOM[mesesCerrados[0]-1]}–${MNOM[mesesCerrados[mesesCerrados.length-1]-1]}`;
+    const fuenteLabel = hasMensual25 ? '' : '<div style="font-size:.6rem;color:var(--muted);margin-top:.2rem">vs 2025 pro-rated</div>';
+    document.getElementById('sgaYoYCard').innerHTML = `
+      <div class="yc-yr">YoY SGA — ${periodoLabel}</div>
+      <div class="yc-rev" style="color:${yoyColor};font-size:1.6rem">
+        ${yoyPct !== null ? `${yoyPct > 0 ? '+' : ''}${yoyPct.toFixed(1)}% ${yoyArrow}` : '—'}
+      </div>
+      <div class="yc-gm">${fmtUk(acum26)} vs ${fmtUk(Math.round(acum25))} en 2025</div>
+      ${fuenteLabel}`;
+  }
 
   // Línea doble: evolución SGA vs Revenue
   const evoLabels=['2023','2024','2025','2026 proy.'];
