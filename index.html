@@ -617,7 +617,7 @@ footer{text-align:center;color:var(--muted);font-size:.7rem;padding:1.8rem 1rem 
     <div class="cc">
       <div class="ct"><span class="dot" style="background:var(--yellow)"></span>Semáforo mensual — SGA% del Revenue</div>
       <div id="sgaSemaforo"></div>
-      <p style="font-size:.68rem;color:var(--muted);margin-top:.75rem">* Marzo refleja datos parciales — cierre pendiente</p>
+      <p style="font-size:.68rem;color:var(--muted);margin-top:.75rem">Datos cerrados: Enero–Abril 2026</p>
     </div>
   </div>
 
@@ -637,32 +637,27 @@ footer{text-align:center;color:var(--muted);font-size:.7rem;padding:1.8rem 1rem 
         <div class="bp-title">Objetivo anual 2026 — $2,647,212 USD</div>
         <div class="bp-sub">50% crecimiento sobre 2025 ($1,764,808 × 1.50) | Distribuido según estacionalidad 2025</div>
       </div>
-      <div class="bp-pct" id="bpPct">10.1%</div>
+      <div class="bp-pct" id="bpPct">—</div>
     </div>
     <div class="bp-track">
-      <div class="bp-fill" id="bpFill" style="width:10.1%;background:var(--yellow)">
-        <span class="bp-fill-lbl">$266,936 logrado</span>
+      <div class="bp-fill" id="bpFill" style="width:0%;background:var(--yellow)">
+        <span class="bp-fill-lbl" id="bpFillLbl">—</span>
       </div>
     </div>
-    <div class="bp-stats">
-      <div><div class="bp-sv">$266,936</div><div class="bp-sl">Logrado Ene-Feb</div></div>
-      <div><div class="bp-sv">$2,380,276</div><div class="bp-sl">Por lograr</div></div>
-      <div><div class="bp-sv">10 meses</div><div class="bp-sl">Restantes</div></div>
-      <div><div class="bp-sv">$238,028</div><div class="bp-sl">Promedio mensual necesario</div></div>
+    <div class="bp-stats" id="bpStats">
+      <div><div class="bp-sv">—</div><div class="bp-sl">Logrado</div></div>
+      <div><div class="bp-sv">—</div><div class="bp-sl">Por lograr</div></div>
+      <div><div class="bp-sv">—</div><div class="bp-sl">Restantes</div></div>
+      <div><div class="bp-sv">—</div><div class="bp-sl">Promedio mensual necesario</div></div>
     </div>
   </div>
 
-  <div class="gap-card" style="background:rgba(0,200,150,.07);border-color:rgba(0,200,150,.25)">
+  <div class="gap-card" id="bpGapCard" style="background:rgba(0,200,150,.07);border-color:rgba(0,200,150,.25)">
     <div>
-      <div class="gap-num" style="color:var(--green)">+$6,940</div>
-      <div style="font-size:.68rem;color:var(--muted);margin-top:2px">EXCEDENTE ACU.</div>
+      <div class="gap-num" id="bpGapNum" style="color:var(--green)">—</div>
+      <div style="font-size:.68rem;color:var(--muted);margin-top:2px" id="bpGapLabel">EXCEDENTE ACU.</div>
     </div>
-    <div class="gap-txt">
-      Enero superó el target en <span style="color:var(--green)">+$19,638</span>.
-      Febrero quedó <span>$12,698 debajo</span>. Resultado acumulado Ene-Feb:
-      <span style="color:var(--green)">+$6,940 sobre el target</span>.
-      El Target Ajustado reduce los meses restantes en <span>-$694/mes</span>.
-    </div>
+    <div class="gap-txt" id="bpGapTxt">Calculando...</div>
   </div>
 
   <div class="cc" style="margin-bottom:1rem">
@@ -695,7 +690,7 @@ footer{text-align:center;color:var(--muted);font-size:.7rem;padding:1.8rem 1rem 
 
   <div class="insight" style="margin-bottom:1.5rem">
     <div class="ci">🎯</div>
-    <div>El objetivo de 2026 requiere un <strong>crecimiento del 50%</strong> sobre 2025. Con $266,936 logrados en Enero-Febrero y un excedente de +$6,940 sobre el target, el inicio es positivo. Las siguientes 7 acciones son las palancas con mayor impacto.</div>
+    <div>El objetivo de 2026 requiere un <strong>crecimiento del 50%</strong> sobre 2025. Con $650,350 logrados en Enero–Abril (24.6% del objetivo anual) y un excedente de +$10,949 sobre el target acumulado, el inicio es positivo. Las siguientes 7 acciones son las palancas con mayor impacto.</div>
   </div>
 
   <div class="rec-card">
@@ -1069,12 +1064,12 @@ const DATA = {
     'FmMeds':                        { año:2026, mes:4 },
   },
   revClienteMes: {
-    'Flo Health':                 { 1:43600, 2:43125, 4:46250 },
+    'Flo Health':                 { 1:43600, 2:43125, 3:44500, 4:46250 },
     'LearnWords':                 { 2:6000 },
-    'Newry Global Media - WeWoo': { 1:53307, 2:26253, 4:56914 },
+    'Newry Global Media - WeWoo': { 1:53763, 2:26478, 4:56914 },
     'Betano':                     { 4:44613 },
     'Bplay':                      { 4:71487 },
-    'Stake CL':                   { 3:11844, 4:18750 },
+    'Stake CL':                   { 3:23688, 4:18750 },
     'FmMeds':                     { 4:3600 },
   },
   retencion: {
@@ -1474,28 +1469,43 @@ function renderPnlTable() {
     }
     return capFuture(a, yr);
   }
+  function get2026Arr(obj) {
+    const a = Array(12).fill(null);
+    Object.keys(obj).forEach(m => { a[Number(m)-1] = Math.abs(obj[Number(m)]); });
+    return a;
+  }
   function mCogs(yr,i) {
-    const a = DATA.monthlyByYear?.[yr]?.cogs;
-    return capFuture(a ? a.map(v => v!=null ? -Math.abs(v) : null) : null, yr);
+    let a = DATA.monthlyByYear?.[yr]?.cogs;
+    if (!a && yr === '2026') a = get2026Arr(DATA.cogs2026);
+    return capFuture(a ? a.map(v => v!=null ? -v : null) : null, yr);
   }
   function mSga(yr,i)  {
-    const a = DATA.monthlyByYear?.[yr]?.sga;
-    return capFuture(a ? a.map(v => v!=null ? -Math.abs(v) : null) : null, yr);
+    let a = DATA.monthlyByYear?.[yr]?.sga;
+    if (!a && yr === '2026') a = get2026Arr(DATA.sga2026);
+    return capFuture(a ? a.map(v => v!=null ? -v : null) : null, yr);
   }
   function mGp(yr,i) {
-    const r = mRev(yr,i), c = DATA.monthlyByYear?.[yr]?.cogs;
+    const r = mRev(yr,i);
+    let c = DATA.monthlyByYear?.[yr]?.cogs;
+    if (!c && yr === '2026') c = get2026Arr(DATA.cogs2026);
     if (!r) return null;
-    return r.map((rv,j) => rv!=null && c?.[j]!=null ? rv - Math.abs(c[j]) : null);
+    return capFuture(r.map((rv,j) => rv!=null && c?.[j]!=null ? rv - c[j] : null), yr);
   }
   function mGm(yr,i) {
-    const r = mRev(yr,i), c = DATA.monthlyByYear?.[yr]?.cogs;
+    const r = mRev(yr,i);
+    let c = DATA.monthlyByYear?.[yr]?.cogs;
+    if (!c && yr === '2026') c = get2026Arr(DATA.cogs2026);
     if (!r||!c) return null;
-    return r.map((rv,j) => rv&&c[j] ? +((1-Math.abs(c[j])/rv)*100).toFixed(1) : null);
+    return capFuture(r.map((rv,j) => rv&&c[j] ? +((1-c[j]/rv)*100).toFixed(1) : null), yr);
   }
   function mProfit(yr,i) {
-    const r = mRev(yr,i), c = DATA.monthlyByYear?.[yr]?.cogs, s = DATA.monthlyByYear?.[yr]?.sga;
+    const r = mRev(yr,i);
+    let c = DATA.monthlyByYear?.[yr]?.cogs;
+    let s = DATA.monthlyByYear?.[yr]?.sga;
+    if (!c && yr === '2026') c = get2026Arr(DATA.cogs2026);
+    if (!s && yr === '2026') s = get2026Arr(DATA.sga2026);
     if (!r) return null;
-    return r.map((rv,j) => rv!=null ? rv - Math.abs(c?.[j]??0) - Math.abs(s?.[j]??0) : null);
+    return capFuture(r.map((rv,j) => rv!=null ? rv - (c?.[j]??0) - (s?.[j]??0) : null), yr);
   }
 
   function fmt$(v,plus=false) {
@@ -2054,6 +2064,46 @@ function buildTab4_OLD() {
 // ── TAB 5 ─────────────────────────────────────────────────────────────────────
 function buildTab5() {
   const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const OBJ_ANUAL = 2647212;
+
+  // ── Progress bar dinámica ──────────────────────────────────────────────────
+  const mesesCon = D.real26.map((v,i) => v != null ? i : -1).filter(i => i >= 0);
+  const logrado  = mesesCon.reduce((s,i) => s + (D.real26[i]||0), 0);
+  const targAdj  = mesesCon.reduce((s,i) => s + (D.adjusted26[i]||0), 0);
+  const pctAnual = (logrado / OBJ_ANUAL * 100);
+  const pctFill  = Math.min(pctAnual, 100);
+  const porLograr = OBJ_ANUAL - logrado;
+  const mesesRest = 12 - mesesCon.length;
+  const promNec  = mesesRest > 0 ? Math.round(porLograr / mesesRest) : 0;
+  const fillColor = pctAnual >= 80 ? 'var(--green)' : pctAnual >= 50 ? 'var(--primary)' : 'var(--yellow)';
+  const periodoFin = MESES[mesesCon[mesesCon.length-1]] || '—';
+
+  document.getElementById('bpPct').textContent    = pctAnual.toFixed(1) + '%';
+  document.getElementById('bpFill').style.width   = pctFill + '%';
+  document.getElementById('bpFill').style.background = fillColor;
+  document.getElementById('bpFillLbl').textContent = fmtU(logrado) + ' logrado';
+  document.getElementById('bpStats').innerHTML = `
+    <div><div class="bp-sv">${fmtU(logrado)}</div><div class="bp-sl">Logrado Ene–${periodoFin}</div></div>
+    <div><div class="bp-sv">${fmtU(porLograr)}</div><div class="bp-sl">Por lograr</div></div>
+    <div><div class="bp-sv">${mesesRest} meses</div><div class="bp-sl">Restantes</div></div>
+    <div><div class="bp-sv">${fmtU(promNec)}</div><div class="bp-sl">Promedio mensual necesario</div></div>`;
+
+  // ── Gap card dinámica ──────────────────────────────────────────────────────
+  const gap = logrado - targAdj;
+  const gapColor = gap >= 0 ? 'var(--green)' : 'var(--red)';
+  const gapLabel = gap >= 0 ? 'EXCEDENTE ACU.' : 'DÉFICIT ACU.';
+  document.getElementById('bpGapNum').textContent  = (gap >= 0 ? '+' : '') + fmtU(gap);
+  document.getElementById('bpGapNum').style.color  = gapColor;
+  document.getElementById('bpGapLabel').textContent = gapLabel;
+  document.getElementById('bpGapCard').style.background = gap >= 0 ? 'rgba(0,200,150,.07)' : 'rgba(255,107,107,.07)';
+  document.getElementById('bpGapCard').style.borderColor = gap >= 0 ? 'rgba(0,200,150,.25)' : 'rgba(255,107,107,.25)';
+  // Detalle por mes en el gap
+  const detalles = mesesCon.map(i => {
+    const d = (D.real26[i]||0) - (D.adjusted26[i]||0);
+    return `${MESES[i]}: <span style="color:${d>=0?'var(--green)':'var(--red)'}">${d>=0?'+':''}${fmtU(d)}</span>`;
+  }).join(' · ');
+  document.getElementById('bpGapTxt').innerHTML = `Acumulado Ene–${periodoFin}: ${detalles}. Resultado acumulado: <span style="color:${gapColor};font-weight:700">${gap>=0?'+':''}${fmtU(gap)} ${gap>=0?'sobre':'bajo'} el target</span>.`;
+
 
   // Objectives chart: Target Orig vs Adjusted vs Real
   CH.obj = new Chart(document.getElementById('chartObj').getContext('2d'), {
@@ -2078,11 +2128,13 @@ function buildTab5() {
   });
 
   // Table
+  let acumReal=0, acumTAdj=0, acumTOrig=0, mesesCerrados=0;
   document.getElementById('objTbody').innerHTML = MESES.map((mes,i) => {
     const real = D.real26[i], tOrig = D.targets26[i], tAdj = D.adjusted26[i];
-    const hasDato = real !== null;
+    const hasDato = real !== null && real !== undefined;
     const pct = hasDato ? Math.round(real/tAdj*100) : null;
     const isAdj = tAdj !== tOrig;
+    if (hasDato) { acumReal+=real; acumTAdj+=tAdj; acumTOrig+=tOrig; mesesCerrados++; }
     const adjCell = isAdj
       ? `<span class="adj-val">${fmtU(tAdj)}</span>`
       : `<span style="color:var(--muted)">${fmtU(tAdj)}</span>`;
@@ -2101,7 +2153,19 @@ function buildTab5() {
       <td>${barCell}</td>
       <td style="text-align:center;font-size:1rem">${icon}</td>
     </tr>`;
-  }).join('');
+  }).join('') + (mesesCerrados > 0 ? (() => {
+    const pctAcum = Math.round(acumReal/acumTAdj*100);
+    const colorAcum = pcolor(pctAcum);
+    return `<tr style="border-top:2px solid rgba(108,99,255,.4);background:rgba(108,99,255,.06)">
+      <td><strong style="color:var(--primary)">Acumulado (${mesesCerrados} m)</strong></td>
+      <td class="num" style="color:var(--muted)">${fmtU(acumTOrig)}</td>
+      <td class="num"><span class="adj-val">${fmtU(acumTAdj)}</span></td>
+      <td class="num"><strong style="color:${colorAcum}">${fmtU(acumReal)}</strong></td>
+      <td class="num"><strong style="color:${colorAcum}">${pctAcum}%</strong></td>
+      <td><div class="tprog-track" style="width:70px"><div class="tprog-fill" style="width:${Math.min(pctAcum,100)}%;background:${colorAcum}"></div></div></td>
+      <td style="text-align:center;font-size:1rem">${pctAcum>=100?'✅':pctAcum>=80?'⚠️':'🔴'}</td>
+    </tr>`;
+  })() : '');
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
