@@ -1006,6 +1006,7 @@ async function loadSheetData() {
     msgEl.textContent = 'Procesando datos...';
     const parsed = parseSheetData(rows);
     mergeSheetData(parsed);
+    syncAll(); // recalcular revenue[5] y prorrateo con datos frescos del sheet
 
     // Update header badge to live timestamp
     const now = new Date();
@@ -1173,9 +1174,35 @@ function formatUSD(n) {
 const GM_FIXED = [32.9, 27.0, 22.8, 29.8, 34.1, 33.8];
 function mgClass(m) { return m > 45 ? 'mg' : m >= 25 ? 'my' : 'mr'; }
 
-// ── Mantener D.revenue[5] en sync con D.rev26 ─────────────────────────────────
-// Cuando se agrega un mes a D.rev26, el total anual se recalcula automáticamente.
-D.revenue[5] = D.rev26.reduce((s, v) => s + (v || 0), 0);
+// ── Prorrateo dinámico de targets futuros ─────────────────────────────────────
+// Toma lo que falta para OBJ_ANUAL y lo redistribuye en los meses sin dato real,
+// manteniendo la proporción del targets26 original. Así adjusted26 siempre refleja
+// la realidad actualizada y todos los tabs que lo consumen quedan en sync.
+function recalcAdjusted26() {
+  const OBJ_ANUAL = 2647212;
+  const cerrados = D.real26.map((v,i) => (v !== null && v !== undefined) ? i : -1).filter(i => i >= 0);
+  const futuros  = D.real26.map((v,i) => (v === null  || v === undefined) ? i : -1).filter(i => i >= 0);
+  if (cerrados.length === 0 || futuros.length === 0) return;
+
+  const logrado   = cerrados.reduce((s,i) => s + (D.real26[i]||0), 0);
+  const restante  = OBJ_ANUAL - logrado;
+  const sumFutOrig = futuros.reduce((s,i) => s + (D.targets26[i]||0), 0);
+  if (sumFutOrig === 0) return;
+
+  futuros.forEach(i => {
+    D.adjusted26[i] = Math.round((D.targets26[i] / sumFutOrig) * restante);
+  });
+}
+
+// ── Sincronización global ──────────────────────────────────────────────────────
+// Recalcula revenue[5] (total 2026) y prorrateo de targets cada vez que hay nuevos datos.
+function syncAll() {
+  D.revenue[5] = D.rev26.reduce((s, v) => s + (v || 0), 0);
+  recalcAdjusted26();
+}
+
+// Correr con datos hardcoded al cargar la página
+syncAll();
 function pcolor(p) { return p >= 80 ? 'var(--green)' : p >= 50 ? 'var(--yellow)' : 'var(--red)'; }
 
 // ── CHART DEFAULTS ────────────────────────────────────────────────────────────
